@@ -73,8 +73,7 @@ namespace threadpool11
 
 	void Worker::execute()
 	{
-		std::cout << std::this_thread::get_id() << " Execute called" << std::endl;
-		
+		//std::cout << std::this_thread::get_id() << " Execute called" << std::endl;
 		{
 			std::unique_lock<std::mutex> initLock(this->initMutex);
 			std::unique_lock<std::mutex> lock(workPostedMutex);
@@ -87,7 +86,7 @@ namespace threadpool11
 		while(!terminate)
 		{
 			std::unique_lock<std::mutex> lock(workPostedMutex);
-			std::cout << "thread started" << std::endl;
+			//std::cout << "thread started" << std::endl;
 			WORK:
 			//std::cout << "work started 2" << std::endl;
 			work();

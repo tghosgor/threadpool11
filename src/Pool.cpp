@@ -52,7 +52,7 @@ namespace threadpool11
 		workerContainerMutex.lock();
 		if(inactiveWorkers.size() > 0)
 		{
-			std::cout << "Work posted." << std::endl;
+			//std::cout << "Work posted." << std::endl;
 			Worker* freeWorker = inactiveWorkers.front();
 			activeWorkers.emplace_front(freeWorker);
 			freeWorker->poolIterator = activeWorkers.begin();
@@ -62,7 +62,7 @@ namespace threadpool11
 		}
 		else
 		{
-			std::cout << "Work gone to enqueuedWork." << std::endl;
+			//std::cout << "Work gone to enqueuedWork." << std::endl;
 			enqueuedWorkMutex.lock();
 			enqueuedWork.emplace_back(work);
 			enqueuedWorkMutex.unlock();
