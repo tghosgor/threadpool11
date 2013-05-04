@@ -102,7 +102,6 @@ namespace threadpool11
 	{
 		std::lock_guard<std::mutex> l(workerContainerMutex);
 		WorkerCountType size = activeWorkers.size();
-		workerContainerMutex.unlock();
 		return size;
 	}
 
@@ -115,9 +114,8 @@ namespace threadpool11
 
 	void Pool::increaseWorkerCountBy(WorkerCountType const& n)
 	{
-		workerContainerMutex.lock();
+		std::lock_guard<std::mutex> l(workerContainerMutex);
 		spawnWorkers(n);
-		workerContainerMutex.unlock();
 	}
 
 	void Pool::spawnWorkers(WorkerCountType const& n)
@@ -139,7 +137,7 @@ namespace threadpool11
 
 	Pool::WorkerCountType Pool::decreaseWorkerCountBy(WorkerCountType n)
 	{
-		workerContainerMutex.lock();
+		std::lock_guard<std::mutex> l(workerContainerMutex);
 		n = std::min(n, inactiveWorkers.size());
 		for(unsigned int i = 0; i < n; ++i)
 		{
@@ -157,7 +155,6 @@ namespace threadpool11
 				}
 			}
 		}
-		workerContainerMutex.unlock();
 		return n;
 	}
 }
