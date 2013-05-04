@@ -32,7 +32,7 @@ either expressed or implied, of the FreeBSD Project.
 
 #include <iostream>
 
-
+#include <cassert>
 #include <vector>
 #include <deque>
 #include <list>
@@ -58,14 +58,14 @@ namespace threadpool11
 
 		std::vector<std::unique_ptr<Worker>> workers;
 
-		std::mutex workerContainerMutex;
+		mutable std::mutex workerContainerMutex;
 		WorkerListType activeWorkers;
 		WorkerListType inactiveWorkers;
 		
-		std::mutex enqueuedWorkMutex;
+		mutable std::mutex enqueuedWorkMutex;
 		std::deque<decltype(Worker::work)> enqueuedWork;
 
-		std::mutex notifyAllFinishedMutex;
+		mutable std::mutex notifyAllFinishedMutex;
 		std::condition_variable notifyAllFinished;
 		
 		void spawnWorkers(WorkerCountType const& n);
@@ -78,8 +78,8 @@ namespace threadpool11
 		void waitAll();
 		void joinAll();
 
-		unsigned int getActiveThreadCount();
-		unsigned int getInactiveThreadCount();
+		WorkerCountType getActiveThreadCount() const;
+		WorkerCountType getInactiveThreadCount() const;
 		
 		void increaseThreadCountBy(WorkerCountType const& n);
 		WorkerCountType decreaseThreadCountBy(WorkerCountType n);

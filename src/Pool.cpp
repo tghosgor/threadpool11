@@ -96,7 +96,7 @@ namespace threadpool11
 		inactiveWorkers.resize(0);
 	}
 
-	Pool::WorkerCountType Pool::getActiveThreadCount()
+	Pool::WorkerCountType Pool::getActiveThreadCount() const
 	{
 		workerContainerMutex.lock();
 		unsigned int size = activeWorkers.size();
@@ -104,7 +104,7 @@ namespace threadpool11
 		return size;
 	}
 
-	Pool::WorkerCountType Pool::getInactiveThreadCount()
+	Pool::WorkerCountType Pool::getInactiveThreadCount() const
 	{
 		workerContainerMutex.lock();
 		unsigned int size = inactiveWorkers.size();
@@ -121,6 +121,8 @@ namespace threadpool11
 
 	void Pool::spawnWorkers(WorkerCountType const& n)
 	{
+		//'OR' makes sure the case where one of the variables is zero, is valid.
+		assert(static_cast<WorkerCountType>(workers.size() + n) > n || static_cast<WorkerCountType>(workers.size() + n) > workers.size());
 		workers.reserve(workers.size() + n);
 		for(unsigned int i = 0; i < n; ++i)
 		{

@@ -75,14 +75,20 @@ namespace threadpool11
 		std::thread thread;
 
 	private:
-		inline void setWork(WorkType const& work);
+		//this is here for inlining purposes
+		void setWork(WorkType const& work)
+		{	
+			std::lock_guard<std::mutex> lock(workPostedMutex);
+			this->work = std::move(work);
+			workPosted.notify_one();
+		}
 		void execute();
 
 	public:
 		Worker(Pool* pool);
 		~Worker();
 
-		bool operator==(Worker const& other);
-		bool operator==(const Worker* other);
+		bool operator==(Worker const& other) const;
+		bool operator==(const Worker* other) const;
 	};
 }
