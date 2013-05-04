@@ -94,8 +94,6 @@ namespace threadpool11
 		};
 		workers.resize(0);
 		inactiveWorkers.resize(0);
-		//No mutex here since no threads left.
-		enqueuedWork.resize(0);
 	}
 
 	Pool::WorkerCountType Pool::getActiveThreadCount()
