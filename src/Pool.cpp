@@ -101,7 +101,7 @@ namespace threadpool11
 	Pool::WorkerCountType Pool::getActiveWorkerCount() const
 	{
 		workerContainerMutex.lock();
-		unsigned int size = activeWorkers.size();
+		WorkerCountType size = activeWorkers.size();
 		workerContainerMutex.unlock();
 		return size;
 	}
@@ -109,7 +109,7 @@ namespace threadpool11
 	Pool::WorkerCountType Pool::getInactiveWorkerCount() const
 	{
 		workerContainerMutex.lock();
-		unsigned int size = inactiveWorkers.size();
+		WorkerCountType size = inactiveWorkers.size();
 		workerContainerMutex.unlock();
 		return size;
 	}
