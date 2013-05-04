@@ -78,10 +78,10 @@ namespace threadpool11
 		void waitAll();
 		void joinAll();
 
-		WorkerCountType getActiveThreadCount() const;
-		WorkerCountType getInactiveThreadCount() const;
+		WorkerCountType getActiveWorkerCount() const;
+		WorkerCountType getInactiveWorkerCount() const;
 		
-		void increaseThreadCountBy(WorkerCountType const& n);
-		WorkerCountType decreaseThreadCountBy(WorkerCountType n);
+		void increaseWorkerCountBy(WorkerCountType const& n);
+		WorkerCountType decreaseWorkerCountBy(WorkerCountType n);
 	};
 }

@@ -98,7 +98,7 @@ namespace threadpool11
 		enqueuedWork.resize(0);
 	}
 
-	Pool::WorkerCountType Pool::getActiveThreadCount() const
+	Pool::WorkerCountType Pool::getActiveWorkerCount() const
 	{
 		workerContainerMutex.lock();
 		unsigned int size = activeWorkers.size();
@@ -106,7 +106,7 @@ namespace threadpool11
 		return size;
 	}
 
-	Pool::WorkerCountType Pool::getInactiveThreadCount() const
+	Pool::WorkerCountType Pool::getInactiveWorkerCount() const
 	{
 		workerContainerMutex.lock();
 		unsigned int size = inactiveWorkers.size();
@@ -114,7 +114,7 @@ namespace threadpool11
 		return size;
 	}
 
-	void Pool::increaseThreadCountBy(WorkerCountType const& n)
+	void Pool::increaseWorkerCountBy(WorkerCountType const& n)
 	{
 		workerContainerMutex.lock();
 		spawnWorkers(n);
@@ -138,7 +138,7 @@ namespace threadpool11
 		}
 	}
 
-	Pool::WorkerCountType Pool::decreaseThreadCountBy(WorkerCountType n)
+	Pool::WorkerCountType Pool::decreaseWorkerCountBy(WorkerCountType n)
 	{
 		workerContainerMutex.lock();
 		n = std::min(n, inactiveWorkers.size());
