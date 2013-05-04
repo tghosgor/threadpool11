@@ -32,7 +32,7 @@ either expressed or implied, of the FreeBSD Project.
 
 namespace threadpool11
 {
-	Pool::Pool(unsigned int const& workerCount)
+	Pool::Pool(WorkerCountType const& workerCount)
 	{
 		spawnWorkers(workerCount);
 	}
@@ -47,7 +47,7 @@ namespace threadpool11
 		return *it;
 	}*/
 	
-	void Pool::postWork(Worker::work_type const& work)
+	void Pool::postWork(Worker::WorkType const& work)
 	{
 		workerContainerMutex.lock();
 		if(inactiveWorkers.size() > 0)
@@ -96,7 +96,7 @@ namespace threadpool11
 		inactiveWorkers.resize(0);
 	}
 
-	unsigned int Pool::getActiveThreadCount()
+	Pool::WorkerCountType Pool::getActiveThreadCount()
 	{
 		workerContainerMutex.lock();
 		unsigned int size = activeWorkers.size();
@@ -104,7 +104,7 @@ namespace threadpool11
 		return size;
 	}
 
-	unsigned int Pool::getInactiveThreadCount()
+	Pool::WorkerCountType Pool::getInactiveThreadCount()
 	{
 		workerContainerMutex.lock();
 		unsigned int size = inactiveWorkers.size();
@@ -112,14 +112,14 @@ namespace threadpool11
 		return size;
 	}
 
-	void Pool::increaseThreadCountBy(unsigned int const& n)
+	void Pool::increaseThreadCountBy(WorkerCountType const& n)
 	{
 		workerContainerMutex.lock();
 		spawnWorkers(n);
 		workerContainerMutex.unlock();
 	}
 
-	void Pool::spawnWorkers(unsigned int const& n)
+	void Pool::spawnWorkers(WorkerCountType const& n)
 	{
 		workers.reserve(workers.size() + n);
 		for(unsigned int i = 0; i < n; ++i)
@@ -134,7 +134,7 @@ namespace threadpool11
 		}
 	}
 
-	unsigned int Pool::decreaseThreadCountBy(unsigned int n)
+	Pool::WorkerCountType Pool::decreaseThreadCountBy(WorkerCountType n)
 	{
 		workerContainerMutex.lock();
 		n = std::min(n, inactiveWorkers.size());

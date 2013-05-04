@@ -46,7 +46,7 @@ namespace threadpool11
 		friend class Pool;
 
 	public:
-		typedef std::function<void()> work_type;
+		typedef std::function<void()> WorkType;
 
 	private:
 		Worker& operator=(Worker&& other);
@@ -62,7 +62,7 @@ namespace threadpool11
 
 		std::list<Worker*>::iterator poolIterator;
 
-		work_type work;
+		WorkType work;
 
 		std::mutex workPostedMutex;
 		std::condition_variable workPosted;
@@ -75,7 +75,7 @@ namespace threadpool11
 		std::thread thread;
 
 	private:
-		void setWork(work_type const& work);
+		inline void setWork(WorkType const& work);
 		void execute();
 
 	public:

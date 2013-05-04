@@ -64,7 +64,7 @@ namespace threadpool11
 		return operator==(*other);
 	}
 
-	void Worker::setWork(work_type const& work)
+	inline void Worker::setWork(WorkType const& work)
 	{
 		std::lock_guard<std::mutex> lock(workPostedMutex);
 		this->work = std::move(work);

@@ -49,7 +49,8 @@ namespace threadpool11
 		friend class Worker;
 
 	public:
-		typedef std::list<Worker*> workerlist_type;
+		typedef std::list<Worker*> WorkerListType;
+		typedef unsigned int WorkerCountType;
 
 	private:
 		Pool& operator=(Pool&);
@@ -58,8 +59,8 @@ namespace threadpool11
 		std::vector<std::unique_ptr<Worker>> workers;
 
 		std::mutex workerContainerMutex;
-		workerlist_type activeWorkers;
-		workerlist_type inactiveWorkers;
+		WorkerListType activeWorkers;
+		WorkerListType inactiveWorkers;
 		
 		std::mutex enqueuedWorkMutex;
 		std::deque<decltype(Worker::work)> enqueuedWork;
@@ -67,20 +68,20 @@ namespace threadpool11
 		std::mutex notifyAllFinishedMutex;
 		std::condition_variable notifyAllFinished;
 		
-		void spawnWorkers(unsigned int const& n);
+		void spawnWorkers(WorkerCountType const& n);
 
 	public:
-		Pool(unsigned int const& workerCount = std::thread::hardware_concurrency());
+		Pool(WorkerCountType const& workerCount = std::thread::hardware_concurrency());
 		//Worker& operator[](unsigned int i);
 
-		void postWork(Worker::work_type const& work);
+		void postWork(Worker::WorkType const& work);
 		void waitAll();
 		void joinAll();
 
 		unsigned int getActiveThreadCount();
 		unsigned int getInactiveThreadCount();
 		
-		void increaseThreadCountBy(unsigned int const& n);
-		unsigned int decreaseThreadCountBy(unsigned int n);
+		void increaseThreadCountBy(WorkerCountType const& n);
+		WorkerCountType decreaseThreadCountBy(WorkerCountType n);
 	};
 }
