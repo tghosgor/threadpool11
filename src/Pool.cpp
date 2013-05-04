@@ -100,7 +100,7 @@ namespace threadpool11
 
 	Pool::WorkerCountType Pool::getActiveWorkerCount() const
 	{
-		workerContainerMutex.lock();
+		std::lock_guard<std::mutex> l(workerContainerMutex);
 		WorkerCountType size = activeWorkers.size();
 		workerContainerMutex.unlock();
 		return size;
@@ -108,9 +108,8 @@ namespace threadpool11
 
 	Pool::WorkerCountType Pool::getInactiveWorkerCount() const
 	{
-		workerContainerMutex.lock();
+		std::lock_guard<std::mutex> l(workerContainerMutex);
 		WorkerCountType size = inactiveWorkers.size();
-		workerContainerMutex.unlock();
 		return size;
 	}
 
