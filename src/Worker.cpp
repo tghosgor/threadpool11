@@ -55,13 +55,20 @@ namespace threadpool11
 		//std::cout << std::this_thread::get_id() << " Worker terminated" << std::endl;
 	}
 	
-	inline bool Worker::operator==(Worker const& other) const
+	bool Worker::operator==(Worker const& other)
 	{
 		return thread.get_id() == other.thread.get_id();
 	}
-	inline bool Worker::operator==(const Worker* other) const
+	bool Worker::operator==(const Worker* other)
 	{
 		return operator==(*other);
+	}
+
+	inline void Worker::setWork(WorkType const& work)
+	{
+		std::lock_guard<std::mutex> lock(workPostedMutex);
+		this->work = std::move(work);
+		workPosted.notify_one();
 	}
 
 	void Worker::execute()
