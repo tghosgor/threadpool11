@@ -41,6 +41,8 @@ either expressed or implied, of the FreeBSD Project.
 
 namespace threadpool11
 {
+	class Pool;
+
 	class Worker
 	{
 		friend class Pool;
@@ -85,7 +87,7 @@ namespace threadpool11
 		void execute();
 
 	public:
-		Worker(Pool* pool);
+		Worker(Pool* const& pool);
 		~Worker();
 
 		bool operator==(Worker const& other) const;

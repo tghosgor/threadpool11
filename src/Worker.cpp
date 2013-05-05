@@ -32,7 +32,7 @@ either expressed or implied, of the FreeBSD Project.
 
 namespace threadpool11
 {
-	Worker::Worker(Pool* pool) :
+	Worker::Worker(Pool* const& pool) :
 		pool(pool),
 		init(0),
 		work(nullptr),

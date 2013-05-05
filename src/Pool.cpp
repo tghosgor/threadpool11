@@ -138,7 +138,7 @@ namespace threadpool11
 	Pool::WorkerCountType Pool::decreaseWorkerCountBy(WorkerCountType n)
 	{
 		std::lock_guard<std::mutex> l(workerContainerMutex);
-		n = std::min(n, inactiveWorkers.size());
+		n = std::min(n, static_cast<Pool::WorkerCountType>(inactiveWorkers.size()));
 		for(unsigned int i = 0; i < n; ++i)
 		{
 			Worker* worker = inactiveWorkers.front();
@@ -146,7 +146,7 @@ namespace threadpool11
 			worker->terminate = true;
 			worker->workPosted.notify_one();
 			worker->thread.join();
-			for(auto& it = workers.begin(); it != workers.end(); ++it)
+			for(auto it = workers.begin(); it != workers.end(); ++it)
 			{
 				if(it->get() == worker)
 				{
