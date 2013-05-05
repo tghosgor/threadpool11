@@ -5,3 +5,5 @@ Release/
 libDebug/
 libRelease/
 *.zip
+*.sdf
+*.opensdf
