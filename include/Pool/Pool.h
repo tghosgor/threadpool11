@@ -40,7 +40,13 @@ either expressed or implied, of the FreeBSD Project.
 #include <memory>
 #include <condition_variable>
 
-#include "Worker.h"
+#include "Worker/Worker.h"
+
+#ifdef threadpool11_EXPORT
+	#define threadpool11_DLLIE __declspec(dllexport)
+#else
+	#define threadpool11_DLLIE __declspec(dllimport)
+#endif
 
 namespace threadpool11
 {
@@ -71,17 +77,19 @@ namespace threadpool11
 		void spawnWorkers(WorkerCountType const& n);
 
 	public:
-		Pool(WorkerCountType const& workerCount = std::thread::hardware_concurrency());
+		threadpool11_DLLIE Pool(WorkerCountType const& workerCount = std::thread::hardware_concurrency());
 		//Worker& operator[](unsigned int i);
 
-		void postWork(Worker::WorkType const& work);
-		void waitAll();
-		void joinAll();
+		threadpool11_DLLIE void postWork(Worker::WorkType const& work);
+		threadpool11_DLLIE void waitAll();
+		threadpool11_DLLIE void joinAll();
 
-		WorkerCountType getActiveWorkerCount() const;
-		WorkerCountType getInactiveWorkerCount() const;
+		threadpool11_DLLIE WorkerCountType getActiveWorkerCount() const;
+		threadpool11_DLLIE WorkerCountType getInactiveWorkerCount() const;
 		
-		void increaseWorkerCountBy(WorkerCountType const& n);
-		WorkerCountType decreaseWorkerCountBy(WorkerCountType n);
+		threadpool11_DLLIE void increaseWorkerCountBy(WorkerCountType const& n);
+		threadpool11_DLLIE WorkerCountType decreaseWorkerCountBy(WorkerCountType n);
 	};
+
+#undef threadpool11_DLLIE
 }
