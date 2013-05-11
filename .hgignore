@@ -6,3 +6,4 @@ Release/
 *.opensdf
 ignore/
 bin/
+*.cmake
