@@ -32,7 +32,7 @@ either expressed or implied, of the FreeBSD Project.
 
 #include <mutex>
 
-#include "threadpool11.h"
+#include "threadpool11/threadpool11.h"
 
 std::mutex coutMutex;
 
