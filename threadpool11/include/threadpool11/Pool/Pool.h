@@ -41,7 +41,7 @@ either expressed or implied, of the FreeBSD Project.
 #include <memory>
 #include <condition_variable>
 
-#include "Worker/Worker.h"
+#include "threadpool11/Worker/Worker.h"
 
 #ifdef WIN32
 	#ifdef threadpool11_EXPORTING
