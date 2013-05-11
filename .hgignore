@@ -7,3 +7,4 @@ Release/
 ignore/
 bin/
 *.cmake
+CMakeCache.txt
