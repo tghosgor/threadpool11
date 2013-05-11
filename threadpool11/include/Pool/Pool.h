@@ -43,10 +43,14 @@ either expressed or implied, of the FreeBSD Project.
 
 #include "Worker/Worker.h"
 
-#ifdef threadpool11_EXPORT
-	#define threadpool11_DLLIE __declspec(dllexport)
+#ifdef WIN32
+	#ifdef threadpool11_EXPORTING
+		#define threadpool11_EXPORT __declspec(dllexport)
+	#else
+		#define threadpool11_EXPORT __declspec(dllimport)
+	#endif
 #else
-	#define threadpool11_DLLIE __declspec(dllimport)
+	#define threadpool11_EXPORT
 #endif
 
 namespace threadpool11
@@ -60,8 +64,10 @@ namespace threadpool11
 		typedef unsigned int WorkerCountType;
 
 	private:
-		Pool& operator=(Pool&);
+		Pool(Pool&&);
+		Pool(Pool const&);
 		Pool& operator=(Pool&&);
+		Pool& operator=(Pool const&);
 
 		std::vector<std::unique_ptr<Worker>> workers;
 
@@ -78,19 +84,20 @@ namespace threadpool11
 		void spawnWorkers(WorkerCountType const& n);
 
 	public:
-		threadpool11_DLLIE Pool(WorkerCountType const& workerCount = std::thread::hardware_concurrency());
+		threadpool11_EXPORT Pool(WorkerCountType const& workerCount = std::thread::hardware_concurrency());
 		//Worker& operator[](unsigned int i);
 
-		threadpool11_DLLIE void postWork(Worker::WorkType const& work);
-		threadpool11_DLLIE void waitAll();
-		threadpool11_DLLIE void joinAll();
+		threadpool11_EXPORT void postWork(Worker::WorkType const& work);
+		threadpool11_EXPORT void waitAll();
+		threadpool11_EXPORT void joinAll();
 
-		threadpool11_DLLIE WorkerCountType getActiveWorkerCount() const;
-		threadpool11_DLLIE WorkerCountType getInactiveWorkerCount() const;
+		threadpool11_EXPORT WorkerCountType getActiveWorkerCount() const;
+		threadpool11_EXPORT WorkerCountType getInactiveWorkerCount() const;
 		
-		threadpool11_DLLIE void increaseWorkerCountBy(WorkerCountType const& n);
-		threadpool11_DLLIE WorkerCountType decreaseWorkerCountBy(WorkerCountType n);
+		threadpool11_EXPORT void increaseWorkerCountBy(WorkerCountType const& n);
+		threadpool11_EXPORT WorkerCountType decreaseWorkerCountBy(WorkerCountType n);
 	};
 
-#undef threadpool11_DLLIE
+#undef threadpool11_EXPORT
+#undef threadpool11_EXPORTING
 }

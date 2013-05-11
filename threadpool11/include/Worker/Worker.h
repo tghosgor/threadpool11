@@ -51,8 +51,10 @@ namespace threadpool11
 		typedef std::function<void()> WorkType;
 
 	private:
-		Worker& operator=(Worker&& other);
-		Worker(Worker&& other);
+		Worker(Worker&&);
+		Worker(Worker const&);
+		Worker& operator=(Worker&&);
+		Worker& operator=(Worker const&);
 		//Worker& operator=(Worker const&& other);
 		//Worker& operator=(Worker&& other);
 

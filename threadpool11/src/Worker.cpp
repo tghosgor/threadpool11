@@ -41,14 +41,6 @@ namespace threadpool11
 	{
 		//std::cout << std::this_thread::get_id() << " Worker created" << std::endl;
 	}
-
-	Worker::Worker(Worker&& other) :
-		pool(other.pool),
-		init(other.init),
-		work(std::move(other.work)),
-		terminate(other.terminate),
-		thread(std::move(other.thread))
-	{}
 	
 	inline bool Worker::operator==(Worker const& other) const
 	{
