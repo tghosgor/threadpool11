@@ -8,3 +8,4 @@ ignore/
 bin/
 *.cmake
 CMakeCache.txt
+CMakeFiles/
