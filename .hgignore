@@ -2,8 +2,6 @@ syntax: glob
 Debug/
 Release/
 *~
-libDebug/
-libRelease/
 *.sdf
 *.opensdf
 ignore/
