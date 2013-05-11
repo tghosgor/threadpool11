@@ -4,7 +4,6 @@ Release/
 *~
 libDebug/
 libRelease/
-*.zip
 *.sdf
 *.opensdf
-images/
+ignore/
