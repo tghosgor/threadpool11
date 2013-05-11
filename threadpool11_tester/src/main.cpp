@@ -34,20 +34,20 @@ either expressed or implied, of the FreeBSD Project.
 
 #include "threadpool11.h"
 
-std::mutex mut;
+std::mutex coutMutex;
 
 void testFunc(int i) {
-	mut.lock();
+	coutMutex.lock();
 	std::cout << "doing " << i << " by " << std::this_thread::get_id() << std::endl;
-	mut.unlock();
+	coutMutex.unlock();
 }
 
 void testFunc2()
 {
-	mut.lock();
+	coutMutex.lock();
 	//heavy job that takes 1 second
 	std::cout << "Waiting thread id: " << std::this_thread::get_id() << std::endl;
-	mut.unlock();
+	coutMutex.unlock();
 	std::this_thread::sleep_for(std::chrono::seconds(1));
 }
 
@@ -62,11 +62,11 @@ int main()
 	*/
 	{
 		std::cout << "This demo is about showing how parallelization increases the performance. "
-			<< "In this test case, work is simulated by making the threads sleep 1 second. "
+			<< "In this test case, work is simulated by making the threads inactive by sleeping for 1 second. "
 			<< "It will seem like all jobs complete in ~1 second even in a single core machine. "
 			<< "However, in real life cases, work would keep CPU busy so you would not get any real benefit using "
 			<< "thread numbers that are higher than your machine's hardware concurrency (threads that are executed "
-			<< "concurrently).\n\n";
+			<< "concurrently) except in some cases like doing file IO.\n\n";
 		{
 			std::cout << "Executing 5 testFunc2() WITHOUT posting to thread pool:\n";
 			auto begin = std::chrono::high_resolution_clock::now();
@@ -98,7 +98,7 @@ int main()
 
 	/**
 	* Demo #2
-	* You should always capture by value or use appropriate mutexes for reference accesses.
+	* You should always capture by value or use appropriate mutexes for reference access.
 	*/
 	/*{
 		for (int i=0; i<20; i++) {
