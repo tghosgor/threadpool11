@@ -1,7 +1,8 @@
 cmake_minimum_required (VERSION 2.8)
 project (threadpool11)
-set (version_major 0)
-set (version_minor 1)
+set(version_major 0)
+set(version_minor 1)
+set(version_patch 0)
 
 # Set a default build type if none was specified
 if(NOT CMAKE_BUILD_TYPE)
