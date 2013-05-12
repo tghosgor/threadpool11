@@ -4,9 +4,10 @@ Release/
 *~
 *.sdf
 *.opensdf
+*.suo
 ignore/
 build/
+CMakeFiles/
 *.cmake
 CMakeCache.txt
-CMakeFiles/
 Makefile
