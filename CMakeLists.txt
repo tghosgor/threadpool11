@@ -5,8 +5,8 @@ set (version_minor 1)
 
 # Set a default build type if none was specified
 if(NOT CMAKE_BUILD_TYPE)
-  message(STATUS "Setting build type to 'Debug' as none was specified.")
-  set(CMAKE_BUILD_TYPE Debug CACHE STRING "Choose the type of build." FORCE)
+  message(STATUS "Defaulting build type to 'Release'.")
+  set(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build." FORCE)
   # Set the possible values of build type for cmake-gui
   set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release")
 endif()
