@@ -1,7 +1,10 @@
 syntax: glob
+*~
 Debug/
 Release/
-*~
+*.sln
+*.vcxproj
+*.vcxproj.filters
 *.sdf
 *.opensdf
 *.suo
