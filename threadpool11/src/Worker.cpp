@@ -91,7 +91,7 @@ namespace threadpool11
 			if(pool->activeWorkers.size() == 0)
 			{
 			//	std::cout << "notify all finished" << std::endl;
-				pool->notifyAllFinished.notify_one();
+				pool->notifyAllFinished.notify_all();
 			}
 
 			pool->workerContainerMutex.unlock();
