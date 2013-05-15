@@ -86,8 +86,8 @@ namespace threadpool11
 		std::lock_guard<std::mutex> l(workerContainerMutex);
 		for(auto& it : workers)
 		{
-			it->terminate = true;
 			std::unique_lock<std::mutex> lock(it->activatorMutex);
+			it->terminate = true;
 			it->activator.notify_one();
 			lock.unlock();
 			it->thread.join();

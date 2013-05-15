@@ -98,8 +98,9 @@ namespace threadpool11
 			pool->notifyAllFinishedMutex.unlock();
 			
 			//std::cout << pool->activeWorkers.size() << " work finished" << std::endl;
-			if(terminate)
-				break;
+			//no need for this anymore, can't set terminate = true when thread is busy. - needs testing
+			//if(terminate)
+			//	break;
 			activator.wait(lock);
 		}
 		//std::cout << "terminating" << std::endl;

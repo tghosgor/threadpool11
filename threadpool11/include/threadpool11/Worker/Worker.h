@@ -82,9 +82,9 @@ namespace threadpool11
 		//this is here for inlining purposes
 		void setWork(WorkType const& work)
 		{	
-			std::lock_guard<std::mutex> lock(workPostedMutex);
+			std::lock_guard<std::mutex> lock(activatorMutex);
 			this->work = std::move(work);
-			workPosted.notify_one();
+			activator.notify_one();
 		}
 		void execute();
 
