@@ -83,6 +83,7 @@ namespace threadpool11
 
 	void Pool::joinAll()
 	{
+		std::lock_guard<std::mutex> l(workerContainerMutex);
 		for(auto& it : workers)
 		{
 			it->terminate = true;
@@ -117,23 +118,6 @@ namespace threadpool11
 		spawnWorkers(n);
 	}
 
-	void Pool::spawnWorkers(WorkerCountType const& n)
-	{
-		//'OR' makes sure the case where one of the variables is zero, is valid.
-		assert(static_cast<WorkerCountType>(workers.size() + n) > n || static_cast<WorkerCountType>(workers.size() + n) > workers.size());
-		workers.reserve(workers.size() + n);
-		for(unsigned int i = 0; i < n; ++i)
-		{
-			workers.emplace_back(new Worker(this));
-			inactiveWorkers.emplace_back(workers.back().get());
-			std::unique_lock<std::mutex> lock(workers.back()->initMutex);
-			if(workers.back()->init == 0)
-			{
-				workers.back()->initialized.wait(lock);
-			}
-		}
-	}
-
 	Pool::WorkerCountType Pool::decreaseWorkerCountBy(WorkerCountType n)
 	{
 		std::lock_guard<std::mutex> l(workerContainerMutex);
@@ -155,5 +139,22 @@ namespace threadpool11
 			}
 		}
 		return n;
+	}
+
+	void Pool::spawnWorkers(WorkerCountType const& n)
+	{
+		//'OR' makes sure the case where one of the variables is zero, is valid.
+		assert(static_cast<WorkerCountType>(workers.size() + n) > n || static_cast<WorkerCountType>(workers.size() + n) > workers.size());
+		workers.reserve(workers.size() + n);
+		for(unsigned int i = 0; i < n; ++i)
+		{
+			workers.emplace_back(new Worker(this));
+			inactiveWorkers.emplace_back(workers.back().get());
+			std::unique_lock<std::mutex> lock(workers.back()->initMutex);
+			if(workers.back()->init == 0)
+			{
+				workers.back()->initialized.wait(lock);
+			}
+		}
 	}
 }
