@@ -87,8 +87,8 @@ namespace threadpool11
 		for(auto& it : workers)
 		{
 			it->terminate = true;
-			std::unique_lock<std::mutex> lock(it->workPostedMutex);
-			it->workPosted.notify_one();
+			std::unique_lock<std::mutex> lock(it->activatorMutex);
+			it->activator.notify_one();
 			lock.unlock();
 			it->thread.join();
 		};
@@ -127,7 +127,7 @@ namespace threadpool11
 			Worker* worker = inactiveWorkers.front();
 			inactiveWorkers.pop_front();
 			worker->terminate = true;
-			worker->workPosted.notify_one();
+			worker->activator.notify_one();
 			worker->thread.join();
 			for(auto it = workers.begin(); it != workers.end(); ++it)
 			{

@@ -68,8 +68,8 @@ namespace threadpool11
 
 		WorkType work;
 
-		std::mutex workPostedMutex;
-		std::condition_variable workPosted;
+		std::mutex activatorMutex;
+		std::condition_variable activator;
 
 		bool terminate;
 
