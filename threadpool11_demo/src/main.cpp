@@ -29,8 +29,9 @@ either expressed or implied, of the FreeBSD Project.
 
 #include <iostream>
 #include <thread>
-
 #include <mutex>
+
+#include <cstdio>
 
 #include "threadpool11/threadpool11.h"
 
@@ -49,6 +50,11 @@ void testFunc2()
 	std::cout << "Waiting thread id: " << std::this_thread::get_id() << std::endl;
 	coutMutex.unlock();
 	std::this_thread::sleep_for(std::chrono::seconds(1));
+}
+
+void testFunc3()
+{
+	volatile int i = std::min(5, rand());
 }
 
 int main()
@@ -80,6 +86,7 @@ int main()
 				<< std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() << " milliseconds.\n\n";
 		}
 
+		pool.increaseWorkerCountBy(5);
 		{
 			std::cout << "Executing 5 testFunc2() WITH posting to thread pool:\n";
 			auto begin = std::chrono::high_resolution_clock::now();
@@ -94,6 +101,19 @@ int main()
 				<< std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() << " milliseconds.\n\n";
 		}
 		std::cout << "\n\n";
+	}
+	
+	{
+		pool.increaseWorkerCountBy(50);
+		std::cout << "Posting 1.000.000 jobs.\n";
+	
+		auto begin = std::chrono::high_resolution_clock::now();
+		for(int i = 0; i < 1000000; ++i)
+		{
+			pool.postWork(testFunc3);
+		}
+		
+		std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - begin).count() << std::endl;
 	}
 
 	/**
@@ -157,6 +177,5 @@ int main()
 	}*/
 
 	pool.joinAll();
-	std::cin.get();
 	return 0;
 };

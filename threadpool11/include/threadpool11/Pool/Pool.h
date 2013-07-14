@@ -29,9 +29,7 @@ either expressed or implied, of the FreeBSD Project.
 
 #pragma once
 
-
 //#include <iostream>
-
 
 #include <cassert>
 #include <vector>
@@ -40,6 +38,7 @@ either expressed or implied, of the FreeBSD Project.
 #include <mutex>
 #include <memory>
 #include <condition_variable>
+#include <atomic>
 
 #include "threadpool11/Worker/Worker.h"
 
@@ -55,48 +54,47 @@ either expressed or implied, of the FreeBSD Project.
 
 namespace threadpool11
 {
-	class Pool
-	{
-		friend class Worker;
+	
+class Pool
+{
+friend class Worker;
 
-	public:
-		typedef std::list<Worker*> WorkerListType;
-		typedef unsigned int WorkerCountType;
+public:
+	typedef size_t WorkerCountType;
 
-	private:
-		Pool(Pool&&);
-		Pool(Pool const&);
-		Pool& operator=(Pool&&);
-		Pool& operator=(Pool const&);
+private:
+	Pool(Pool&&);
+	Pool(Pool const&);
+	Pool& operator=(Pool&&);
+	Pool& operator=(Pool const&);
 
-		std::vector<std::unique_ptr<Worker>> workers;
+	std::deque<Worker> workers;
+	WorkerCountType activeWorkerCount;
 
-		mutable std::mutex workerContainerMutex;
-		WorkerListType activeWorkers;
-		WorkerListType inactiveWorkers;
+	mutable std::mutex workerContainerMutex;
 		
-		mutable std::mutex enqueuedWorkMutex;
-		std::deque<decltype(Worker::work)> enqueuedWork;
+	mutable std::mutex enqueuedWorkMutex;
+	std::deque<decltype(Worker::work)> enqueuedWork;
 
-		mutable std::mutex notifyAllFinishedMutex;
-		std::condition_variable notifyAllFinished;
+	mutable std::mutex notifyAllFinishedMutex;
+	std::condition_variable notifyAllFinished;
 		
-		void spawnWorkers(WorkerCountType const& n);
+	void spawnWorkers(WorkerCountType const& n);
 
-	public:
-		threadpool11_EXPORT Pool(WorkerCountType const& workerCount = std::thread::hardware_concurrency());
-		//Worker& operator[](unsigned int i);
+public:
+	threadpool11_EXPORT Pool(WorkerCountType const& workerCount = std::thread::hardware_concurrency());
+	//Worker& operator[](unsigned int i);
+	
+	threadpool11_EXPORT void postWork(Worker::WorkType&& work);
+	threadpool11_EXPORT void waitAll();
+	threadpool11_EXPORT void joinAll();
 
-		threadpool11_EXPORT void postWork(Worker::WorkType const& work);
-		threadpool11_EXPORT void waitAll();
-		threadpool11_EXPORT void joinAll();
-
-		threadpool11_EXPORT WorkerCountType getActiveWorkerCount() const;
-		threadpool11_EXPORT WorkerCountType getInactiveWorkerCount() const;
+	threadpool11_EXPORT WorkerCountType getActiveWorkerCount() const;
+	threadpool11_EXPORT WorkerCountType getInactiveWorkerCount() const;
 		
-		threadpool11_EXPORT void increaseWorkerCountBy(WorkerCountType const& n);
-		threadpool11_EXPORT WorkerCountType decreaseWorkerCountBy(WorkerCountType n);
-	};
+	threadpool11_EXPORT void increaseWorkerCountBy(WorkerCountType const& n);
+	threadpool11_EXPORT WorkerCountType decreaseWorkerCountBy(WorkerCountType n);
+};
 
 #undef threadpool11_EXPORT
 #undef threadpool11_EXPORTING

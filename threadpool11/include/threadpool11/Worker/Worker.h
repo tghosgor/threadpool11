@@ -41,57 +41,58 @@ either expressed or implied, of the FreeBSD Project.
 
 namespace threadpool11
 {
-	class Pool;
+	
+class Pool;
 
-	class Worker
-	{
-		friend class Pool;
+class Worker
+{
+	friend class Pool;
 
-	public:
-		typedef std::function<void()> WorkType;
+public:
+	typedef std::function<void()> WorkType;
 
-	private:
-		Worker(Worker&&);
-		Worker(Worker const&);
-		Worker& operator=(Worker&&);
-		Worker& operator=(Worker const&);
-		//Worker& operator=(Worker const&& other);
-		//Worker& operator=(Worker&& other);
+private:
+	Worker(Worker&&);
+	Worker(Worker const&);
+	Worker& operator=(Worker&&);
+	Worker& operator=(Worker const&);
+	//Worker& operator=(Worker const&& other);
+	//Worker& operator=(Worker&& other);
 
-		Pool* const pool;
+	Pool* const pool;
 		
-		std::mutex initMutex;
-		bool init;
-		std::condition_variable initialized;
+	std::mutex initMutex;
+	bool init;
+	std::condition_variable initializer;
+		
+	enum class Status : bool
+	{
+		DEACTIVE = 0,
+		ACTIVE = 1
+	} status;
 
-		std::list<Worker*>::iterator poolIterator;
+	WorkType work;
 
-		WorkType work;
+	std::mutex activatorMutex;
+	std::condition_variable activator;
 
-		std::mutex activatorMutex;
-		std::condition_variable activator;
+	bool terminate;
 
-		bool terminate;
+	/**
+	* This should always stay at bottom so that it is called at the most end.
+	*/
+	std::thread thread;
 
-		/**
-		* This should always stay at bottom so that it is called at the most end.
-		*/
-		std::thread thread;
+private:
+	void setWork(WorkType& work);
+	
+	void execute();
 
-	private:
-		//this is here for inlining purposes
-		void setWork(WorkType const& work)
-		{	
-			std::lock_guard<std::mutex> lock(activatorMutex);
-			this->work = std::move(work);
-			activator.notify_one();
-		}
-		void execute();
+public:
+	Worker(Pool* const& pool);
 
-	public:
-		Worker(Pool* const& pool);
-
-		bool operator==(Worker const& other) const;
-		bool operator==(const Worker* other) const;
-	};
+	bool operator==(Worker const& other) const;
+	bool operator==(const Worker* other) const;
+};
+	
 }

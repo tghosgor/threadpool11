@@ -31,78 +31,91 @@ either expressed or implied, of the FreeBSD Project.
 
 namespace threadpool11
 {
-	Worker::Worker(Pool* const& pool) :
-		pool(pool),
-		init(0),
-		work(nullptr),
-		terminate(false),
-		thread(std::bind(&Worker::execute, this))
-	{
-		//std::cout << std::this_thread::get_id() << " Worker created" << std::endl;
-	}
 	
-	inline bool Worker::operator==(Worker const& other) const
+Worker::Worker(Pool* const& pool) :
+	pool(pool),
+	init(0),
+	status(Status::DEACTIVE),
+	work(nullptr),
+	terminate(false),
+	thread(std::bind(&Worker::execute, this))
+{
+	//std::cout << std::this_thread::get_id() << " Worker created" << std::endl;
+}
+	
+inline bool Worker::operator==(Worker const& other) const
+{
+	return thread.get_id() == other.thread.get_id();
+}
+
+inline bool Worker::operator==(const Worker* other) const
+{
+	return operator==(*other);
+}
+
+void Worker::setWork(WorkType& work)
+{
+	++pool->activeWorkerCount;
+	status = Status::ACTIVE;
+	std::lock_guard<std::mutex> lock_guard(activatorMutex);
+	this->work = std::move(work);
+		activator.notify_one();
+}
+
+void Worker::execute()
+{
+	//std::cout << std::this_thread::get_id() << " Execute called" << std::endl;
 	{
-		return thread.get_id() == other.thread.get_id();
-	}
-	inline bool Worker::operator==(const Worker* other) const
-	{
-		return operator==(*other);
+		std::unique_lock<std::mutex> initLock(this->initMutex);
+		std::unique_lock<std::mutex> lock(activatorMutex);
+		init = 1;
+		initializer.notify_one();
+		initLock.unlock();
+		activator.wait(lock);
 	}
 
-	void Worker::execute()
+	while(!terminate)
 	{
-		//std::cout << std::this_thread::get_id() << " Execute called" << std::endl;
+		std::unique_lock<std::mutex> lock(activatorMutex);
+		//std::cout << "thread started" << std::endl;
+		WORK:
+		//std::cout << "work started 2" << std::endl;
+		work();
+		//std::cout << std::this_thread::get_id() <<  "-" << workPosted.native_handle()
+		//	<< " Work called" << std::endl;
 		{
-			std::unique_lock<std::mutex> initLock(this->initMutex);
-			std::unique_lock<std::mutex> lock(activatorMutex);
-			init = 1;
-			initialized.notify_one();
-			initLock.unlock();
-			activator.wait(lock);
-		}
-
-		while(!terminate)
-		{
-			std::unique_lock<std::mutex> lock(activatorMutex);
-			//std::cout << "thread started" << std::endl;
-			WORK:
-			//std::cout << "work started 2" << std::endl;
-			work();
-			//std::cout << std::this_thread::get_id() <<  "-" << workPosted.native_handle()
-			//	<< " Work called" << std::endl;
-			pool->enqueuedWorkMutex.lock();
+			std::unique_lock<std::mutex> lock(pool->enqueuedWorkMutex);
 			if(pool->enqueuedWork.size() > 0)
 			{
 				work = std::move(pool->enqueuedWork.front());
 				pool->enqueuedWork.pop_front();
-				pool->enqueuedWorkMutex.unlock();
 			//	std::cout << pool->enqueuedWork.size() << " got work from enqueue, going back to work" << std::endl;
 				goto WORK;
 			}
-			pool->enqueuedWorkMutex.unlock();
-			
-			pool->notifyAllFinishedMutex.lock();
-			pool->workerContainerMutex.lock();
-
-			pool->activeWorkers.erase(poolIterator);
-			pool->inactiveWorkers.emplace_front(this);
-
-			if(pool->activeWorkers.size() == 0)
-			{
-			//	std::cout << "notify all finished" << std::endl;
-				pool->notifyAllFinished.notify_all();
-			}
-
-			pool->workerContainerMutex.unlock();
-			pool->notifyAllFinishedMutex.unlock();
-			
-			//std::cout << pool->activeWorkers.size() << " work finished" << std::endl;
-			//no need for this anymore, can't set terminate = true when thread is busy. - needs testing
-			//if(terminate)
-			//	break;
-			activator.wait(lock);
 		}
-		//std::cout << "terminating" << std::endl;
+		
+		pool->notifyAllFinishedMutex.lock();
+		
+		pool->workerContainerMutex.lock();
+		
+		--pool->activeWorkerCount;
+		status = Status::DEACTIVE;
+		
+		//	std::cout << "notify all finished" << std::endl;
+		if(pool->activeWorkerCount)
+			pool->notifyAllFinished.notify_all();
+		
+		pool->workerContainerMutex.unlock();
+		
+		pool->notifyAllFinishedMutex.unlock();
+		
+		//std::cout << pool->activeWorkers.size() << " work finished" << std::endl;
+		//no need for this anymore, can't set terminate = true when thread is busy. - needs testing
+		//if(terminate)
+		//	break;
+		activator.wait(lock);
 	}
+		//std::cout << "terminating" << std::endl;
+}
+
 }
