@@ -59,7 +59,7 @@ void Worker::setWork(WorkType& work)
 	status = Status::ACTIVE;
 	std::lock_guard<std::mutex> lock_guard(activatorMutex);
 	this->work = std::move(work);
-		activator.notify_one();
+	activator.notify_one();
 }
 
 void Worker::execute()
@@ -84,7 +84,7 @@ void Worker::execute()
 		//std::cout << std::this_thread::get_id() <<  "-" << workPosted.native_handle()
 		//	<< " Work called" << std::endl;
 		{
-			std::unique_lock<std::mutex> lock(pool->enqueuedWorkMutex);
+			std::lock_guard<std::mutex> lock(pool->enqueuedWorkMutex);
 			if(pool->enqueuedWork.size() > 0)
 			{
 				work = std::move(pool->enqueuedWork.front());

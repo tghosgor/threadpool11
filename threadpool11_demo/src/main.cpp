@@ -100,9 +100,11 @@ int main()
 			std::cout << "execution took "
 				<< std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() << " milliseconds.\n\n";
 		}
-		std::cout << "\n\n";
 	}
 	
+	/**
+	* Demo #2
+	*/
 	{
 		pool.increaseWorkerCountBy(50);
 		std::cout << "Posting 1.000.000 jobs.\n";
@@ -117,7 +119,7 @@ int main()
 	}
 
 	/**
-	* Demo #2
+	* Demo #3
 	* You should always capture by value or use appropriate mutexes for reference access.
 	*/
 	/*{
@@ -175,6 +177,8 @@ int main()
 			std::this_thread::sleep_for(std::chrono::milliseconds(50));
 		}
 	}*/
+	
+	std::cout << "\n\n";
 
 	pool.joinAll();
 	return 0;

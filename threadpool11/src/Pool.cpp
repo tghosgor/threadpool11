@@ -51,7 +51,7 @@ Pool::Pool(WorkerCountType const& workerCount) :
 void Pool::postWork(Worker::WorkType&& work)
 {
 	{
-		std::unique_lock<std::mutex> lock(workerContainerMutex);
+		std::lock_guard<std::mutex> lock(workerContainerMutex);
 		
 		if(activeWorkerCount < workers.size())
 		{
