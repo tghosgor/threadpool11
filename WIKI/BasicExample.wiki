@@ -1,0 +1,16 @@
+#summary A very short example.
+
+The following code creates a thread pool of 5 threads and runs the specified lambda function in one of the free threads in the thread pool.
+
+{{{
+auto pool = threadpool11::Pool(5);
+pool.postWork(
+   []{
+      std::cout "Hi, I am thread #" << std::this_thread::get_id() << std::endl;
+   }
+);
+pool.waitAll();
+pool.joinAll();
+}}}
+
+[API You should head on to see the API and functions' behavior.]

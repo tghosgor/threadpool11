@@ -1,0 +1,98 @@
+# Four function API documentation.
+
+You only need *FOUR BASIC* functions including pool constructor to use this library.
+
+===Everything is inside *threadpool11* namespace.===
+
+----
+
+==#  {{{Pool::Pool(unsigned int const& workerCount = std::thread::hardware_concurrency())}}}==
+
+*Pool constructor*
+Constructs a thread pool of {{{workerCount}}} threads. Threads are immediately initialized and put to wait for a signal which will be sent by {{{Pool::postWork}}}.
+
+If you leave it empty, the number of threads will be defaulted to the number of threads that can be run concurrently on the machine which program is running on.
+
+
+----
+
+==#  {{{void Pool::postWork(Worker::work_type const& work)}}}==
+
+*Posting a new work to thread pool for processing*
+This functions takes a reference to the type {{{Worker::work_type}}} which is defined as {{{std::function<void()>}}}.
+
+As you can see the work function does not take any arguments. If you want to pass data to work function, you should wrap it in a lambda function like this:
+
+{{{
+int increaseArg(int& toModify)
+{
+  ++toModify;
+}
+
+int main()
+{
+  .
+  .
+  int i = 5;
+  pool.postWork([&](){increaseArg(i);});
+}
+}}}
+
+Of course, you should protect using a *std::mutex* where it is needed (it is actually needed here).
+
+If there are no threads left (i.e. you called {{{Pool::joinAll();}}} prior to this function) all the works
+you post gets enqueued. If you spawn new threads in future, they will be executed then.
+
+----
+==#  {{{void Pool::waitAll()}}}==
+
+This function suspends the calling thread until all posted works are finished and, therefore, all worker threads are free. It guarantees you that before the function returns, all queued works are finished.
+
+----
+==#  {{{void Pool::joinAll()}}}==
+
+This function joins all the threads in the thread pool as fast as possible.
+All the posted works are *NOT GUARANTEED* to be finished before this function returns. However, ongoing functions in threads in the pool are guaranteed to finish before that threads are terminated.
+
+It is a good idea to use {{{Pool::waitAll}}} before {{{Pool::joinAll}}} if you do want to finish everything queued before exiting.
+
+----
+=Below here is functions that allows you do customize the library=
+_i.e. you can take statistics of active/inactive threads in an interval and dynamically allocate new threads based on the time all threads are busy_
+
+==#  {{{unsigned int Pool::getActiveThreadCount()}}}==
+
+This function requires a mutex lock so you should call it wisely if you performance is a life matter to you. {{{unsigned int}}} return type is for performance purposes. It is unlikely you will have more threads than 32-bit unsigned integer can represent.
+
+*Return value:* Returns the number of threads that are active.
+
+
+----
+
+
+==#  {{{unsigned int Pool::getInactiveThreadCount()}}}==
+
+This function requires a mutex lock so you should call it wisely if you performance is a life matter to you. {{{unsigned int}}} return type is for performance purposes. It is unlikely you will have more threads than 32-bit unsigned integer can represent.
+
+*Return value:* Returns the number of threads that are inactive.
+
+
+----
+
+
+==#  {{{void Pool::increaseThreadCountBy(unsigned int const& n)}}}==
+
+Increases the number of threads in the pool by _*n*_.
+
+
+----
+
+
+==#  {{{unsigned int Pool::decreaseThreadCountBy(unsigned int n)}}}==
+
+Tries to decrease the number of threads in the pool by _*n*_. If there are _at least_ _*n*_ inactive threads in the pool, _*n*_ threads will be destroyed. If the number of inactive threads in the pool is lower than _*n*_, only the inactive threads will be destroyed.
+
+*Return value:* The number of threads that are destroyed.
+
+
+----

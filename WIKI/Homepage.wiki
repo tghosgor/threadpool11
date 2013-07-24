@@ -1,0 +1,13 @@
+#summary A very brief introduction
+#labels Featured
+
+= Introduction =
+
+This project features a basic thread pooling implementation with fixed number of threads in pool declaration. If there are no available threads left in the pool, the work gets queued and gets processed whenever a thread is available.
+
+
+= Navigation =
+
+[BasicExample] - Basic example of creating a thread pool and posting a job.
+
+[API] - Information about the API and functions' behavior.
