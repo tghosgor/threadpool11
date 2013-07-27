@@ -54,7 +54,7 @@ inline bool Worker::operator==(const Worker* other) const
 	return operator==(*other);
 }
 
-void Worker::setWork(WorkType& work)
+void Worker::setWork(WorkType&& work)
 {
 	++pool->activeWorkerCount;
 	status = Status::ACTIVE;

@@ -61,7 +61,7 @@ void Pool::postWork(Worker::WorkType&& work)
 				//std::cout << "Work posted." << std::endl;
 				if(it.status == Worker::Status::DEACTIVE)
 				{
-					it.setWork(work);
+					it.setWork(std::move(work));
 					return;
 				}
 			}

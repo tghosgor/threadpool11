@@ -85,7 +85,7 @@ private:
 	std::thread thread;
 
 private:
-	void setWork(WorkType& work);
+	void setWork(WorkType&& work);
 	
 	void execute();
 
