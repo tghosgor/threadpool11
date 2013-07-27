@@ -62,7 +62,6 @@ private:
 	Pool* const pool;
 		
 	std::mutex initMutex;
-	bool init;
 	std::condition_variable initializer;
 		
 	enum class Status : bool
@@ -75,7 +74,9 @@ private:
 
 	std::mutex activatorMutex;
 	std::condition_variable activator;
+	bool isWorkReallyPosted;	// spurious wakeup protection
 
+	bool init;
 	bool terminate;
 
 	/**

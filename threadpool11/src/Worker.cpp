@@ -34,9 +34,10 @@ namespace threadpool11
 	
 Worker::Worker(Pool* const& pool) :
 	pool(pool),
-	init(0),
 	status(Status::DEACTIVE),
 	work(nullptr),
+	isWorkReallyPosted(false),
+	init(false),
 	terminate(false),
 	thread(std::bind(&Worker::execute, this))
 {
@@ -59,6 +60,7 @@ void Worker::setWork(WorkType& work)
 	status = Status::ACTIVE;
 	std::lock_guard<std::mutex> lock_guard(activatorMutex);
 	this->work = std::move(work);
+	isWorkReallyPosted = true;
 	activator.notify_one();
 }
 
@@ -71,12 +73,13 @@ void Worker::execute()
 		init = 1;
 		initializer.notify_one();
 		initLock.unlock();
-		activator.wait(lock);
+		activator.wait(lock, [this](){ return isWorkReallyPosted; });
 	}
 
 	while(!terminate)
 	{
 		std::unique_lock<std::mutex> lock(activatorMutex);
+		isWorkReallyPosted = false;
 		//std::cout << "thread started" << std::endl;
 		WORK:
 		//std::cout << "work started 2" << std::endl;
@@ -113,7 +116,7 @@ void Worker::execute()
 		//no need for this anymore, can't set terminate = true when thread is busy. - needs testing
 		//if(terminate)
 		//	break;
-		activator.wait(lock);
+		activator.wait(lock, [this](){ return isWorkReallyPosted; });
 	}
 		//std::cout << "terminating" << std::endl;
 }
