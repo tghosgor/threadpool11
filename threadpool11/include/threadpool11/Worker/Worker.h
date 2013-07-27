@@ -76,7 +76,7 @@ private:
 	std::condition_variable activator;
 	bool isWorkReallyPosted;	// spurious wakeup protection
 
-	bool init;
+	bool isReallyInitialized;
 	bool terminate;
 
 	/**

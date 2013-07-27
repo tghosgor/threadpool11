@@ -33,7 +33,8 @@ namespace threadpool11
 {
 	
 Pool::Pool(WorkerCountType const& workerCount) :
-	activeWorkerCount(workerCount)
+	activeWorkerCount(workerCount),
+	areAllReallyFinished(false)
 {
 	spawnWorkers(workerCount);
 }
@@ -79,7 +80,10 @@ void Pool::waitAll()
 	workerContainerMutex.unlock();
 	std::unique_lock<std::mutex> lock(notifyAllFinishedMutex);
 	if(size)
-		notifyAllFinished.wait(lock);
+	{
+		notifyAllFinished.wait(lock, [this](){ return areAllReallyFinished; });
+		areAllReallyFinished = false;
+	}
 }
 
 void Pool::joinAll()
@@ -88,6 +92,7 @@ void Pool::joinAll()
 	{
 		it.terminate = true;
 		std::unique_lock<std::mutex> lock(it.activatorMutex);
+		it.isWorkReallyPosted = true;
 		it.activator.notify_one();
 		lock.unlock();
 		it.thread.join();
@@ -122,6 +127,7 @@ Pool::WorkerCountType Pool::decreaseWorkerCountBy(WorkerCountType n)
 	for(unsigned int i = workers.size() - 1; i > workers.size() - n; --i)
 	{
 		workers[i].terminate = true;
+		workers[i].isWorkReallyPosted = true;
 		workers[i].activator.notify_one();
 		workers[i].thread.join();
 	}
@@ -136,10 +142,8 @@ void Pool::spawnWorkers(WorkerCountType const& n)
 	{
 		workers.emplace_back(this);
 		std::unique_lock<std::mutex> lock(workers.back().initMutex);
-		if(workers.back().init == 0)
-		{
-			workers.back().initializer.wait(lock);
-		}
+		if(workers.back().isReallyInitialized == 0)
+			workers.back().initializer.wait(lock, [this](){ return workers.back().isReallyInitialized; });
 	}
 }
 

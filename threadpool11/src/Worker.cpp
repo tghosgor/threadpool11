@@ -37,7 +37,7 @@ Worker::Worker(Pool* const& pool) :
 	status(Status::DEACTIVE),
 	work(nullptr),
 	isWorkReallyPosted(false),
-	init(false),
+	isReallyInitialized(false),
 	terminate(false),
 	thread(std::bind(&Worker::execute, this))
 {
@@ -70,7 +70,7 @@ void Worker::execute()
 	{
 		std::unique_lock<std::mutex> initLock(this->initMutex);
 		std::unique_lock<std::mutex> lock(activatorMutex);
-		init = 1;
+		isReallyInitialized = true;
 		initializer.notify_one();
 		initLock.unlock();
 		activator.wait(lock, [this](){ return isWorkReallyPosted; });
@@ -106,7 +106,10 @@ void Worker::execute()
 		
 		//	std::cout << "notify all finished" << std::endl;
 		if(pool->activeWorkerCount)
+		{
+			pool->areAllReallyFinished = true;
 			pool->notifyAllFinished.notify_all();
+		}
 		
 		pool->workerContainerMutex.unlock();
 		

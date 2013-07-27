@@ -78,6 +78,7 @@ private:
 
 	mutable std::mutex notifyAllFinishedMutex;
 	std::condition_variable notifyAllFinished;
+	bool areAllReallyFinished;
 		
 	void spawnWorkers(WorkerCountType const& n);
 
