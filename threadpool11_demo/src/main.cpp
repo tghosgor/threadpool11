@@ -116,6 +116,9 @@ int main()
 		}
 		
 		std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - begin).count() << std::endl;
+		
+		pool.waitAll();
+		std::cout << "Wait took: " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - begin).count() << std::endl;
 	}
 
 	/**

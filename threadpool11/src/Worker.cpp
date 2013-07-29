@@ -66,7 +66,6 @@ void Worker::setWork(WorkType&& work)
 
 void Worker::execute()
 {
-	//std::cout << std::this_thread::get_id() << " Execute called" << std::endl;
 	{
 		std::unique_lock<std::mutex> initLock(this->initMutex);
 		std::unique_lock<std::mutex> lock(activatorMutex);
@@ -80,19 +79,15 @@ void Worker::execute()
 	{
 		std::unique_lock<std::mutex> lock(activatorMutex);
 		isWorkReallyPosted = false;
-		//std::cout << "thread started" << std::endl;
 		WORK:
-		//std::cout << "work started 2" << std::endl;
+		//++pool->workCallCounter;
 		work();
-		//std::cout << std::this_thread::get_id() <<  "-" << workPosted.native_handle()
-		//	<< " Work called" << std::endl;
 		{
 			std::lock_guard<std::mutex> lock(pool->enqueuedWorkMutex);
 			if(pool->enqueuedWork.size() > 0)
 			{
 				work = std::move(pool->enqueuedWork.front());
 				pool->enqueuedWork.pop_front();
-			//	std::cout << pool->enqueuedWork.size() << " got work from enqueue, going back to work" << std::endl;
 				goto WORK;
 			}
 		}
@@ -104,8 +99,7 @@ void Worker::execute()
 		--pool->activeWorkerCount;
 		status = Status::DEACTIVE;
 		
-		//	std::cout << "notify all finished" << std::endl;
-		if(pool->activeWorkerCount)
+		if(!pool->activeWorkerCount)
 		{
 			pool->areAllReallyFinished = true;
 			pool->notifyAllFinished.notify_all();
@@ -115,13 +109,8 @@ void Worker::execute()
 		
 		pool->notifyAllFinishedMutex.unlock();
 		
-		//std::cout << pool->activeWorkers.size() << " work finished" << std::endl;
-		//no need for this anymore, can't set terminate = true when thread is busy. - needs testing
-		//if(terminate)
-		//	break;
 		activator.wait(lock, [this](){ return isWorkReallyPosted; });
 	}
-		//std::cout << "terminating" << std::endl;
 }
 
 }

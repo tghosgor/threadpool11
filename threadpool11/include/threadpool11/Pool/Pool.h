@@ -29,16 +29,16 @@ either expressed or implied, of the FreeBSD Project.
 
 #pragma once
 
-//#include <iostream>
+#include <iostream>
 
 #include <cassert>
-#include <vector>
+
+#include <atomic>
+#include <condition_variable>
 #include <deque>
 #include <list>
-#include <mutex>
 #include <memory>
-#include <condition_variable>
-#include <atomic>
+#include <mutex>
 
 #include "threadpool11/Worker/Worker.h"
 
@@ -79,12 +79,13 @@ private:
 	mutable std::mutex notifyAllFinishedMutex;
 	std::condition_variable notifyAllFinished;
 	bool areAllReallyFinished;
+	
+	//std::atomic<WorkerCountType> workCallCounter;
 		
 	void spawnWorkers(WorkerCountType const& n);
 
 public:
 	threadpool11_EXPORT Pool(WorkerCountType const& workerCount = std::thread::hardware_concurrency());
-	//Worker& operator[](unsigned int i);
 	
 	threadpool11_EXPORT void postWork(Worker::WorkType&& work);
 	threadpool11_EXPORT void waitAll();

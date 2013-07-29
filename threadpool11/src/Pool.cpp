@@ -33,21 +33,12 @@ namespace threadpool11
 {
 	
 Pool::Pool(WorkerCountType const& workerCount) :
-	activeWorkerCount(workerCount),
-	areAllReallyFinished(false)
+	activeWorkerCount(0),
+	areAllReallyFinished(false)/*,
+	workCallCounter(0)*/
 {
 	spawnWorkers(workerCount);
 }
-
-/*Worker& Pool::operator[](unsigned int i)
-{
-	auto it = workers.begin();
-	for(unsigned int num = 0; num < i; ++num)
-	{
-		++it;
-	}
-	return *it;
-}*/
 	
 void Pool::postWork(Worker::WorkType&& work)
 {
@@ -84,6 +75,7 @@ void Pool::waitAll()
 		notifyAllFinished.wait(lock, [this](){ return areAllReallyFinished; });
 		areAllReallyFinished = false;
 	}
+	//std::cout << "Work call count: " << workCallCounter << std::endl;
 }
 
 void Pool::joinAll()

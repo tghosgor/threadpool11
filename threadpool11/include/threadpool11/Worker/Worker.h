@@ -29,15 +29,13 @@ either expressed or implied, of the FreeBSD Project.
 
 #pragma once
 
-
 //#include <iostream>
 
-
-#include <thread>
-#include <functional>
-#include <mutex>
-#include <list>
 #include <condition_variable>
+#include <functional>
+#include <list>
+#include <mutex>
+#include <thread>
 
 namespace threadpool11
 {
@@ -56,8 +54,6 @@ private:
 	Worker(Worker const&);
 	Worker& operator=(Worker&&);
 	Worker& operator=(Worker const&);
-	//Worker& operator=(Worker const&& other);
-	//Worker& operator=(Worker&& other);
 
 	Pool* const pool;
 		
