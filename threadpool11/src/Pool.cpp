@@ -49,7 +49,6 @@ void Pool::postWork(Worker::WorkType&& work)
 		{
 			for(auto& it : workers)
 			{
-				//std::cout << "Work posted." << std::endl;
 				if(it.status == Worker::Status::DEACTIVE)
 				{
 					++activeWorkerCount;
