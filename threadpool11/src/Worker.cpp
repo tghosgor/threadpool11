@@ -56,7 +56,6 @@ inline bool Worker::operator==(const Worker* other) const
 
 void Worker::setWork(WorkType&& work)
 {
-	++pool->activeWorkerCount;
 	status = Status::ACTIVE;
 	std::lock_guard<std::mutex> lock_guard(activatorMutex);
 	this->work = std::move(work);
