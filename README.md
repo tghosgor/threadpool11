@@ -1,4 +1,4 @@
-## Cross-platform thread pool implementation using C++11 features.
+### Cross-platform thread pool implementation using C++11 features.
 
 You can find the *VERY EASY* API documentation [API on this wiki page].
 
