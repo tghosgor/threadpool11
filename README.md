@@ -1,4 +1,5 @@
 threadpool11
+![threadpool11](https://code.google.com/p/threadpool11/logo?cct=1368292723)
 ==========
 
 ### Cross-platform thread pool implementation using C++11 features.
