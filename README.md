@@ -1,4 +1,4 @@
-![threadpool11](https://code.google.com/p/threadpool11/logo?cct=1368292723)
+![threadpool11](https://raw.github.com/tghosgor/threadpool11/master/misc/logo.png)
 threadpool11
 ==========
 
