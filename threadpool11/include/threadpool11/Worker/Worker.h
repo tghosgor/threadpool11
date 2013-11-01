@@ -50,7 +50,7 @@ public:
 	typedef std::function<void()> WorkType;
 
 private:
-	Worker(Worker&&);
+	Worker(Worker);
 	Worker(Worker const&);
 	Worker& operator=(Worker&&);
 	Worker& operator=(Worker const&);

@@ -40,7 +40,7 @@ Pool::Pool(WorkerCountType const& workerCount) :
 	spawnWorkers(workerCount);
 }
 	
-void Pool::postWork(Worker::WorkType&& work)
+void Pool::postWork(Worker::WorkType work)
 {
 	{
 		std::lock_guard<std::mutex> lock(workerContainerMutex);

@@ -87,7 +87,7 @@ private:
 public:
 	threadpool11_EXPORT Pool(WorkerCountType const& workerCount = std::thread::hardware_concurrency());
 	
-	threadpool11_EXPORT void postWork(Worker::WorkType&& work);
+	threadpool11_EXPORT void postWork(Worker::WorkType work);
 	threadpool11_EXPORT void waitAll();
 	threadpool11_EXPORT void joinAll();
 
