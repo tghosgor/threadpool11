@@ -12,4 +12,4 @@ This thread-pool implementation assumes that workload takes a considerable time 
 
 I will be glad to hear about the suggestions/ideas you have about the project, via the [issue reporting section](https://github.com/tghosgor/threadpool11/issues).
 
-###For more information and API documentation, head on to the [wiki](https://github.com/tghosgor/threadpool11/wiki/).
+###For more information and API documentation, head on to the [wiki](https://github.com/tghosgor/threadpool11/wiki/). There is also a demo application in repository.
