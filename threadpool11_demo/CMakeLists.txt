@@ -1,7 +1,6 @@
-include_directories(${threadpool11_SOURCE_DIR}/threadpool11/include)
-link_directories(${threadpool11_BINARY_DIR}/threadpool11/bin)
+INCLUDE_DIRECTORIES(${threadpool11_SOURCE_DIR}/threadpool11/include)
+LINK_DIRECTORIES(${threadpool11_BINARY_DIR}/threadpool11/bin)
 
-add_executable(threadpool11_demo src/main.cpp)
+ADD_EXECUTABLE(threadpool11_demo src/main.cpp)
 
-target_link_libraries(threadpool11_demo threadpool11)
-
+TARGET_LINK_LIBRARIES(threadpool11_demo threadpool11)
