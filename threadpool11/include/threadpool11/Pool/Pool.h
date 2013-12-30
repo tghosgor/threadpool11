@@ -90,7 +90,8 @@ public:
 	threadpool11_EXPORT void postWork(Worker::WorkType work);
 	threadpool11_EXPORT void waitAll();
 	threadpool11_EXPORT void joinAll();
-
+	
+	threadpool11_EXPORT WorkerCountType getWorkQueueCount() const;
 	threadpool11_EXPORT WorkerCountType getActiveWorkerCount() const;
 	threadpool11_EXPORT WorkerCountType getInactiveWorkerCount() const;
 		
