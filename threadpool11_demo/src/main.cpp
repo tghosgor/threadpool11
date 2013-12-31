@@ -30,6 +30,7 @@ either expressed or implied, of the FreeBSD Project.
 #include <iostream>
 #include <mutex>
 #include <thread>
+#include <algorithm>
 
 #include <cstdio>
 
