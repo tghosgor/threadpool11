@@ -98,13 +98,8 @@ void Pool::joinAll()
 
 Pool::WorkerCountType Pool::getWorkQueueCount() const
 {
-	Pool::WorkerCountType size = 0;
-	
-	enqueuedWorkMutex.lock();
-	size = enqueuedWork.size();
-	enqueuedWorkMutex.unlock();
-	
-	return size;
+	std::lock_guard<std::mutex> l(enqueuedWorkMutex);	
+	return enqueuedWork.size();
 }
 
 Pool::WorkerCountType Pool::getActiveWorkerCount() const
