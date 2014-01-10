@@ -80,8 +80,6 @@ private:
   mutable std::mutex enqueuedWorkMutex;
   std::deque<decltype(Worker::work)> enqueuedWork;
 
-  //std::atomic<WorkerCountType> workCallCounter;
-
   void spawnWorkers(WorkerCountType n);
 
 public:

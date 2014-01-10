@@ -168,7 +168,7 @@ int main()
       });
     }
 
-    for (int i=0; i<20; i++) {
+    for (int i=0; i < 20; i++) {
       std::cout << "\tfuture[" << i << "] value: " << futures[i].get() << std::endl;
     }
     auto end = std::chrono::high_resolution_clock::now();
