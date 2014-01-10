@@ -35,7 +35,6 @@ either expressed or implied, of the FreeBSD Project.
 #include <cstdio>
 
 #include "threadpool11/threadpool11.h"
-#include "threadpool11/Helper.hpp"
 
 std::mutex coutMutex;
 

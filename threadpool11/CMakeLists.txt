@@ -15,6 +15,7 @@ if(MAKE_CXX_COMPILER_ID MATCHES GNU OR
 INSTALL(FILES include/threadpool11/threadpool11.h DESTINATION include/threadpool11)
 INSTALL(FILES include/threadpool11/Worker.h DESTINATION include/threadpool11)
 INSTALL(FILES include/threadpool11/Pool.h DESTINATION include/threadpool11)
+INSTALL(FILES include/threadpool11/Helper.h DESTINATION include/threadpool11)
 INSTALL(TARGETS threadpool11
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib
