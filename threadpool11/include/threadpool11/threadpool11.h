@@ -29,5 +29,5 @@ either expressed or implied, of the FreeBSD Project.
 
 #pragma once
 
-#include "Pool/Pool.h"
-#include "Worker/Worker.h"
+#include "Pool.h"
+#include "Worker.h"

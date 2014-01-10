@@ -36,8 +36,7 @@ namespace threadpool11
 	
 Pool::Pool(WorkerCountType const& workerCount) :
 	activeWorkerCount(0),
-	areAllReallyFinished(false)/*,
-	workCallCounter(0)*/
+	areAllReallyFinished(false)
 {
 	spawnWorkers(workerCount);
 }
@@ -77,7 +76,6 @@ void Pool::waitAll()
 		notifyAllFinished.wait(lock, [this](){ return areAllReallyFinished; });
 		areAllReallyFinished = false;
 	}
-	//std::cout << "Work call count: " << workCallCounter << std::endl;
 }
 
 void Pool::joinAll()
@@ -102,6 +100,12 @@ Pool::WorkerCountType Pool::getWorkQueueCount() const
 	return enqueuedWork.size();
 }
 
+Pool::WorkerCountType Pool::getWorkerCount() const
+{
+	std::lock_guard<std::mutex> l(workerContainerMutex);
+  return workers.size();
+}
+
 Pool::WorkerCountType Pool::getActiveWorkerCount() const
 {
 	std::lock_guard<std::mutex> l(workerContainerMutex);
@@ -120,18 +124,22 @@ void Pool::increaseWorkerCountBy(WorkerCountType const& n)
 	spawnWorkers(n);
 }
 
-Pool::WorkerCountType Pool::decreaseWorkerCountBy(WorkerCountType n)
+Pool::WorkerCountType Pool::decreaseWorkerCountBy(WorkerCountType const& n)
 {
 	std::lock_guard<std::mutex> l(workerContainerMutex);
-	n = std::min(n, static_cast<Pool::WorkerCountType>(workers.size()));
-	for(unsigned int i = workers.size() - 1; i > workers.size() - n; --i)
+	WorkerCountType i = std::min(n, static_cast<Pool::WorkerCountType>(workers.size()));
+	while(i > 0)
 	{
-		workers[i].terminate = true;
-		workers[i].isWorkReallyPosted = true;
-		workers[i].activator.notify_one();
-		workers[i].thread.join();
+    if(workers.back().status != Worker::Status::DEACTIVE)
+      break;
+    workers.back().terminate = true;
+    workers.back().isWorkReallyPosted = true;
+    workers.back().activator.notify_one();
+    workers.back().thread.join();
+    workers.pop_back();
+    --i;
 	}
-	return n;
+	return n - i;
 }
 
 void Pool::spawnWorkers(WorkerCountType const& n)

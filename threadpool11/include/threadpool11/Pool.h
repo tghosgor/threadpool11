@@ -29,67 +29,77 @@ either expressed or implied, of the FreeBSD Project.
 
 #pragma once
 
-//#include <iostream>
+#include <iostream>
 
+#include <cassert>
+
+#include <atomic>
 #include <condition_variable>
-#include <functional>
+#include <deque>
 #include <list>
+#include <memory>
 #include <mutex>
-#include <thread>
+
+#include "threadpool11/Worker.h"
+
+#ifdef WIN32
+	#ifdef threadpool11_EXPORTING
+		#define threadpool11_EXPORT __declspec(dllexport)
+	#else
+		#define threadpool11_EXPORT __declspec(dllimport)
+	#endif
+#else
+	#define threadpool11_EXPORT
+#endif
 
 namespace threadpool11
 {
 	
-class Pool;
-
-class Worker
+class Pool
 {
-	friend class Pool;
+friend class Worker;
 
 public:
-	typedef std::function<void()> WorkType;
+	typedef size_t WorkerCountType;
 
 private:
-	Worker(Worker&&);
-	Worker(Worker const&);
-	Worker& operator=(Worker&&);
-	Worker& operator=(Worker const&);
+	Pool(Pool&&);
+	Pool(Pool const&);
+	Pool& operator=(Pool&&);
+	Pool& operator=(Pool const&);
 
-	Pool* const pool;
+	std::deque<Worker> workers;
+	WorkerCountType activeWorkerCount;
+
+	mutable std::mutex workerContainerMutex;
 		
-	std::mutex initMutex;
-	std::condition_variable initializer;
-		
-	enum class Status : bool
-	{
-		DEACTIVE = 0,
-		ACTIVE = 1
-	} status;
+	mutable std::mutex enqueuedWorkMutex;
+	std::deque<decltype(Worker::work)> enqueuedWork;
 
-	WorkType work;
-
-	std::mutex activatorMutex;
-	std::condition_variable activator;
-	bool isWorkReallyPosted;	// spurious wakeup protection
-
-	bool isReallyInitialized;
-	bool terminate;
-
-	/**
-	* This should always stay at bottom so that it is called at the most end.
-	*/
-	std::thread thread;
-
-private:
-	void setWork(WorkType work);
+	mutable std::mutex notifyAllFinishedMutex;
+	std::condition_variable notifyAllFinished;
+	bool areAllReallyFinished;
 	
-	void execute();
+	//std::atomic<WorkerCountType> workCallCounter;
+		
+	void spawnWorkers(WorkerCountType const& n);
 
 public:
-	Worker(Pool* const& pool);
-
-	bool operator==(Worker const& other) const;
-	bool operator==(const Worker* other) const;
+	threadpool11_EXPORT Pool(WorkerCountType const& workerCount = std::thread::hardware_concurrency());
+	
+	threadpool11_EXPORT void postWork(Worker::WorkType work);
+	threadpool11_EXPORT void waitAll();
+	threadpool11_EXPORT void joinAll();
+	
+  threadpool11_EXPORT WorkerCountType getWorkerCount() const;
+	threadpool11_EXPORT WorkerCountType getWorkQueueCount() const;
+	threadpool11_EXPORT WorkerCountType getActiveWorkerCount() const;
+	threadpool11_EXPORT WorkerCountType getInactiveWorkerCount() const;
+		
+	threadpool11_EXPORT void increaseWorkerCountBy(WorkerCountType const& n);
+	threadpool11_EXPORT WorkerCountType decreaseWorkerCountBy(WorkerCountType const& n);
 };
-	
+
+#undef threadpool11_EXPORT
+#undef threadpool11_EXPORTING
 }
