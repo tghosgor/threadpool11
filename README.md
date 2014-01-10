@@ -12,6 +12,6 @@ This thread-pool implementation assumes that workload takes a considerable time 
 
 I will be glad to hear about the suggestions/ideas you have about the project, via the [issue reporting section](https://github.com/tghosgor/threadpool11/issues).
 
-All non-'_-dev_' branches are safe to use.
+All non-'_-dev_' branches are safe to use but prefer the latest version.
 
 ###For more information and API documentation, head on to the [wiki](https://github.com/tghosgor/threadpool11/wiki/). There is also a demo application in repository.
