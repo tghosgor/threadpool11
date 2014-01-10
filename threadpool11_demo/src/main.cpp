@@ -67,7 +67,7 @@ int main()
 	/**
 	* Demo #1.
 	*/
-	{
+	/*{
 		std::cout << "This demo is about showing how parallelization increases the performance. "
 			<< "In this test case, work is simulated by making the threads inactive by sleeping for 1 second. "
 			<< "It will seem like all jobs complete in ~1 second even in a single core machine. "
@@ -91,61 +91,67 @@ int main()
 		pool.increaseWorkerCountBy(5);
 		{
 			std::cout << "Executing 5 testFunc2() WITH posting to thread pool:\n";
+      std::vector<std::future<void>> futures;
 			auto begin = std::chrono::high_resolution_clock::now();
-			pool.postWork<void>(testFunc2);
-			pool.postWork<void>(testFunc2);
-			pool.postWork<void>(testFunc2);
-			pool.postWork<void>(testFunc2);
-			pool.postWork<void>(testFunc2);
-			pool.waitAll();
+			futures.emplace_back(pool.postWork<void>(testFunc2));
+			futures.emplace_back(pool.postWork<void>(testFunc2));
+			futures.emplace_back(pool.postWork<void>(testFunc2));
+			futures.emplace_back(pool.postWork<void>(testFunc2));
+			futures.emplace_back(pool.postWork<void>(testFunc2));
+			for(auto& it : futures)
+        it.get();
 			auto end = std::chrono::high_resolution_clock::now();
 			std::cout << "\tDemo 1 took "
 				<< std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() << " milliseconds.\n\n";
 		}
-	}
+	}*/
 	
 	/**
 	* Demo #2
 	*/
-	{
+	/*{
     std::cout << "Demo 2\n";
 		pool.increaseWorkerCountBy(50);
 		std::cout << "Posting 1.000.000 jobs.\n";
 	
+    std::vector<std::future<void>> futures;
 		auto begin = std::chrono::high_resolution_clock::now();
 		for(int i = 0; i < 1000000; ++i)
 		{
-			pool.postWork<void>(testFunc3);
+			futures.emplace_back(pool.postWork<void>(testFunc3));
 		}
 		auto end = std::chrono::high_resolution_clock::now();
+    for(auto& it : futures)
+      it.get();
+		auto end2 = std::chrono::high_resolution_clock::now();
 		
-		pool.waitAll();
-		std::cout << "Demo 2 took " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - begin).count() << " milliseconds.\n\n";
+		std::cout << "Demo 2 took " << std::chrono::duration_cast<std::chrono::milliseconds>(end2 - begin).count() << " milliseconds. (Posting: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() << " ms, getting: " << std::chrono::duration_cast<std::chrono::milliseconds>(end2 - end).count() << " ms)\n\n";
 	}
     
-  std::cout << "Current worker count is " << pool.getWorkerCount() << " (Active: " << pool.getActiveWorkerCount() << ", Inactive: " << pool.getInactiveWorkerCount() << ") . Setting worker count to 5 again... ";
-  pool.decreaseWorkerCountBy(pool.getWorkerCount() - 5);
-  std::cout << "The new worker count is " << pool.getWorkerCount() << ".\n\n";
+  std::cout << "Current worker count is " << pool.getActiveWorkerCount() + pool.getInactiveWorkerCount()
+            << " (Active: " << pool.getActiveWorkerCount() << ", Inactive: " << pool.getInactiveWorkerCount()
+            << ") . Setting worker count to 5 again... ";
+  pool.decreaseWorkerCountBy(pool.getInactiveWorkerCount() - 5);
+  std::cout << "The new worker count is " << pool.getInactiveWorkerCount() << ".\n\n";*/
 
 	/**
 	* Demo #3
 	* You should always capture by value or use appropriate mutexes for reference access.
 	*/
-	{
+	/*{
     std::cout << "Demo 3\n";
     std::cout << "Testing lambda copy/modify:\n";
 		for (int i=0; i<20; i++) {
 			pool.postWork<void>([=]() { testFunc(i); });
 		}
-		pool.waitAll();
     std::cout << "Done.\n\n";
-	}
+	}*/
   
 	/**
 	* Demo #4
 	* Using futures.
 	*/
-  {
+  /*{
     std::cout << "Demo 4\n";
     std::cout << "WARNING: This test's output may be distorted because no synchronization on std::cout is done.\n";
     std::array<std::future<float>, 20> futures;
@@ -164,7 +170,7 @@ int main()
 		auto end = std::chrono::high_resolution_clock::now();
     std::cout << "Demo 4 took "
       << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() << " milliseconds.\n\n";
-  }
+  }*/
 
 	/**
 	* Test case for Issue #1 (fixed): Pool::postWork waiting forever, due to posting work before all threads in pool

@@ -70,95 +70,123 @@ private:
 	Pool& operator=(Pool&&);
 	Pool& operator=(Pool const&);
 
-	std::deque<Worker> workers;
-	WorkerCountType activeWorkerCount;
-
-	mutable std::mutex workerContainerMutex;
+	std::list<Worker> activeWorkers;
+	mutable std::mutex activeWorkerContMutex;
+  
+  std::list<Worker> inactiveWorkers;
+	mutable std::mutex inactiveWorkerContMutex;
 		
 	mutable std::mutex enqueuedWorkMutex;
 	std::deque<decltype(Worker::work)> enqueuedWork;
-
-	mutable std::mutex notifyAllFinishedMutex;
-	std::condition_variable notifyAllFinished;
-	bool areAllReallyFinished;
 	
 	//std::atomic<WorkerCountType> workCallCounter;
 		
-	void spawnWorkers(WorkerCountType const& n);
+	void spawnWorkers(WorkerCountType n);
 
 public:
 	threadpool11_EXPORT Pool(WorkerCountType const& workerCount = std::thread::hardware_concurrency());
 	
   template<typename T>
-	threadpool11_EXPORT 
+	threadpool11_EXPORT
   std::future<T> postWork(std::function<T()> callable)
   {
-    auto promise = new std::promise<T>;
-    auto future = promise->get_future();
+    std::promise<T> promise;
+    auto future = promise.get_future();
+    
+    /* TODO: how to avoid copy of callable into this lambda and the ones below? In a decent way... */
+    /* evil move hack */
+    auto move_callable = make_move_on_copy(std::move(callable));
+    /* evil move hack */
+    auto move_promise = make_move_on_copy(std::move(promise));
     {
-      std::lock_guard<std::mutex> lock(workerContainerMutex);
-      
-      if(activeWorkerCount < workers.size())
+      std::lock_guard<std::mutex> lock(inactiveWorkerContMutex);
+      if(inactiveWorkers.size() > 0)
       {
-        for(auto& it : workers)
-        {
-          if(it.status == Worker::Status::DEACTIVE)
-          {
-            ++activeWorkerCount;
-            //TODO: how to avoid copy of callable into this lambda and the ones below? in a decent way!
-            auto move_hack = make_move_on_copy(std::move(callable));
-            it.setWork([move_hack, promise](){ promise->set_value((move_hack.Value())()); delete promise; });
-            return future;
-          }
-        }
+        std::lock_guard<std::mutex> lock(activeWorkerContMutex);
+        activeWorkers.splice(activeWorkers.end(), inactiveWorkers, --inactiveWorkers.end(), inactiveWorkers.end());
+        //TODO: if the element is inserted at the ::end() no need to look it up again and can use std::forward_list
+        auto workerIterator = --activeWorkers.end();
+        workerIterator->iterator = workerIterator;
+        workerIterator->setWork([move_callable, move_promise]() mutable { move_promise.Value().set_value((move_callable.Value())()); });
+        return future;
       }
     }
   
-    auto move_hack = make_move_on_copy(std::move(callable));
     std::lock_guard<std::mutex> lock(enqueuedWorkMutex);
-    enqueuedWork.emplace_back([move_hack, promise](){ promise->set_value((move_hack.Value())()); delete promise; });
+    enqueuedWork.emplace_back([move_callable, move_promise]() mutable { move_promise.Value().set_value((move_callable.Value())()); });
     return future;
   }
   
-	threadpool11_EXPORT void waitAll();
+  /**
+   * This function joins all the threads in the thread pool as fast as possible.
+   * All the posted works are NOT GUARANTEED to be finished before the worker threads are destroyed and
+   * this function returns. Enqueued works are wiped out.
+   * 
+   * However, ongoing works in the threads in the pool are guaranteed to finish before that threads are terminated.
+   */
 	threadpool11_EXPORT void joinAll();
 	
+  /**
+   * This function requires a mutex lock so you should call it wisely if you performance is a life matter to you.
+   */
 	threadpool11_EXPORT WorkerCountType getWorkQueueCount() const;
-  threadpool11_EXPORT WorkerCountType getWorkerCount() const;
+  
+  /**
+   * This function requires a mutex lock so you should call it wisely if you performance is a life matter to you.
+   */
 	threadpool11_EXPORT WorkerCountType getActiveWorkerCount() const;
+  
+  /**
+   * This function requires a mutex lock so you should call it wisely if you performance is a life matter to you.
+   */
 	threadpool11_EXPORT WorkerCountType getInactiveWorkerCount() const;
-		
+  
+  /**
+   * Increases the number of threads in the pool by n.
+   */
 	threadpool11_EXPORT void increaseWorkerCountBy(WorkerCountType const& n);
+  
+  /**
+   * Tries to decrease the number of threads in the pool by **n*. Setting **n* higher than the
+   * number of workers has no bad effect. If there are no active threads and you want to destroy all the threads
+   * Pool::decreaseWorkerCountBy(std::numeric_limits<Pool::WorkerCountType>::max());
+   * will do.
+   * 
+   * This function is not an optimal implementation because it linearly looks for workers from the end of the list
+   * until it sees an active Worker. If the last workers in the list are working but others are inactive,
+   * it does not get past the inactive ones.
+   */
 	threadpool11_EXPORT WorkerCountType decreaseWorkerCountBy(WorkerCountType n);
 };
   
 template<>
-threadpool11_EXPORT inline
-std::future<void> Pool::postWork<void>(std::function<void()> callable)
+threadpool11_EXPORT 
+std::future<void> Pool::postWork(std::function<void()> callable)
 {
-  auto promise = new std::promise<void>;
-  auto future = promise->get_future();
+  std::promise<void> promise;
+  auto future = promise.get_future();
+    
+  /* TODO: how to avoid copy of callable into this lambda and the ones below? In a decent way... */
+  /* evil move hack */
+  auto move_callable = make_move_on_copy(std::move(callable));
+  /* evil move hack */
+  auto move_promise = make_move_on_copy(std::move(promise));
   {
-    std::lock_guard<std::mutex> lock(workerContainerMutex);
-      
-    if(activeWorkerCount < workers.size())
+    std::lock_guard<std::mutex> lock(inactiveWorkerContMutex);
+    if(inactiveWorkers.size() > 0)
     {
-      for(auto& it : workers)
-      {
-        if(it.status == Worker::Status::DEACTIVE)
-        {
-          ++activeWorkerCount;
-          auto move_hack = make_move_on_copy(std::move(callable));
-          it.setWork([move_hack, promise]() { (move_hack.Value())(); promise->set_value(); delete promise; });
-          return future;
-        }
-      }
+      std::lock_guard<std::mutex> lock(activeWorkerContMutex);
+      activeWorkers.splice(activeWorkers.end(), inactiveWorkers, --inactiveWorkers.end(), inactiveWorkers.end());
+      //TODO: if the element is inserted at the ::end() no need to look it up again and can use std::forward_list
+      auto workerIterator = --activeWorkers.end();
+      workerIterator->iterator = workerIterator;
+      workerIterator->setWork([move_callable, move_promise]() mutable { (move_callable.Value())(); move_promise.Value().set_value(); });
+      return future;
     }
   }
   
-  auto move_hack = make_move_on_copy(std::move(callable));
   std::lock_guard<std::mutex> lock(enqueuedWorkMutex);
-  enqueuedWork.emplace_back([move_hack, promise](){ (move_hack.Value())(); promise->set_value(); delete promise; });
+  enqueuedWork.emplace_back([move_callable, move_promise]() mutable { (move_callable.Value())(); move_promise.Value().set_value(); });
   return future;
 }
 

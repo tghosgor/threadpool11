@@ -35,7 +35,6 @@ namespace threadpool11
 	
 Worker::Worker(Pool* const& pool) :
 	pool(pool),
-	status(Status::DEACTIVE),
 	work(nullptr),
 	isWorkReallyPosted(false),
 	isReallyInitialized(false),
@@ -57,9 +56,8 @@ inline bool Worker::operator==(const Worker* other) const
 
 void Worker::setWork(WorkType work)
 {
-	status = Status::ACTIVE;
-	std::lock_guard<std::mutex> lock_guard(activatorMutex);
 	this->work = std::move(work);
+	std::lock_guard<std::mutex> lock_guard(activatorMutex);
 	isWorkReallyPosted = true;
 	activator.notify_one();
 }
@@ -80,8 +78,7 @@ void Worker::execute()
 		std::unique_lock<std::mutex> lock(activatorMutex);
 		isWorkReallyPosted = false;
 		WORK:
-		//++pool->workCallCounter;
-		work();
+		work(); 
 		{
 			std::lock_guard<std::mutex> lock(pool->enqueuedWorkMutex);
 			if(pool->enqueuedWork.size() > 0)
@@ -92,22 +89,16 @@ void Worker::execute()
 			}
 		}
 		
-		pool->notifyAllFinishedMutex.lock();
-		
-		pool->workerContainerMutex.lock();
-		
-		--pool->activeWorkerCount;
-		status = Status::DEACTIVE;
-		
-		if(!pool->activeWorkerCount)
-		{
-			pool->areAllReallyFinished = true;
-			pool->notifyAllFinished.notify_all();
-		}
-		
-		pool->workerContainerMutex.unlock();
-		
-		pool->notifyAllFinishedMutex.unlock();
+    {
+      std::lock(pool->activeWorkerContMutex, pool->inactiveWorkerContMutex);
+      auto end = iterator;
+      ++end;
+      pool->inactiveWorkers.splice(pool->inactiveWorkers.end(), pool->activeWorkers, iterator, end);
+      iterator = --pool->inactiveWorkers.end();
+      
+      pool->activeWorkerContMutex.unlock();
+      pool->inactiveWorkerContMutex.unlock();
+    }
 		
 		activator.wait(lock, [this](){ return isWorkReallyPosted; });
 	}

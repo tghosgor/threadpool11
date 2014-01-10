@@ -34,40 +34,39 @@ either expressed or implied, of the FreeBSD Project.
 namespace threadpool11
 {
 	
-Pool::Pool(WorkerCountType const& workerCount) :
-	activeWorkerCount(0),
-	areAllReallyFinished(false)/*,
-	workCallCounter(0)*/
+Pool::Pool(WorkerCountType const& workerCount)
 {
 	spawnWorkers(workerCount);
 }
 
-void Pool::waitAll()
-{
-	workerContainerMutex.lock();
-	WorkerCountType size = activeWorkerCount;
-	workerContainerMutex.unlock();
-	std::unique_lock<std::mutex> lock(notifyAllFinishedMutex);
-	if(size)
-	{
-		notifyAllFinished.wait(lock, [this](){ return areAllReallyFinished; });
-		areAllReallyFinished = false;
-	}
-	//std::cout << "Work call count: " << workCallCounter << std::endl;
-}
-
 void Pool::joinAll()
 {
-	for(auto& it : workers)
-	{
-		it.terminate = true;
-		it.activatorMutex.lock();
-		it.isWorkReallyPosted = true;
-		it.activator.notify_one();
-		it.activatorMutex.unlock();
-		it.thread.join();
-	}
-	workers.clear();
+  {
+    std::lock_guard<std::mutex> l(inactiveWorkerContMutex);
+    for(auto& it : inactiveWorkers)
+    {
+      it.terminate = true;
+      it.activatorMutex.lock();
+      it.isWorkReallyPosted = true;
+      it.activator.notify_one();
+      it.activatorMutex.unlock();
+      it.thread.join();
+    }
+    inactiveWorkers.clear();
+  }
+  {
+    std::lock_guard<std::mutex> l(activeWorkerContMutex);
+    for(auto& it : activeWorkers)
+    {
+      it.terminate = true;
+      it.activatorMutex.lock();
+      it.isWorkReallyPosted = true;
+      it.activator.notify_one();
+      it.activatorMutex.unlock();
+      it.thread.join();
+    }
+    activeWorkers.clear();
+  }
 	//No mutex here since no threads left.
 	enqueuedWork.resize(0);
 }
@@ -78,57 +77,44 @@ Pool::WorkerCountType Pool::getWorkQueueCount() const
 	return enqueuedWork.size();
 }
 
-Pool::WorkerCountType Pool::getWorkerCount() const
-{
-	std::lock_guard<std::mutex> l(workerContainerMutex);
-  return workers.size();
-}
-
 Pool::WorkerCountType Pool::getActiveWorkerCount() const
 {
-	std::lock_guard<std::mutex> l(workerContainerMutex);
-	return activeWorkerCount;
+	std::lock_guard<std::mutex> l(activeWorkerContMutex);
+	return activeWorkers.size();
 }
 
 Pool::WorkerCountType Pool::getInactiveWorkerCount() const
 {
-	std::lock_guard<std::mutex> l(workerContainerMutex);
-	return (workers.size() - activeWorkerCount);
+	std::lock_guard<std::mutex> l(inactiveWorkerContMutex);
+	return inactiveWorkers.size();
 }
 
 void Pool::increaseWorkerCountBy(WorkerCountType const& n)
 {
-	std::lock_guard<std::mutex> l(workerContainerMutex);
+	std::lock_guard<std::mutex> l(inactiveWorkerContMutex);
 	spawnWorkers(n);
 }
 
 Pool::WorkerCountType Pool::decreaseWorkerCountBy(WorkerCountType n)
 {
-	std::lock_guard<std::mutex> l(workerContainerMutex);
-  n = std::min(n, static_cast<Pool::WorkerCountType>(workers.size()));
-	for(Pool::WorkerCountType i = 0; i < n; ++i)
-	{
-		workers.back().terminate = true;
-    workers.back().activatorMutex.lock();
-		workers.back().isWorkReallyPosted = true;
-		workers.back().activator.notify_one();
-    workers.back().activatorMutex.unlock();
-		workers.back().thread.join();
-    workers.pop_back();
-	}
+	std::lock_guard<std::mutex> l(inactiveWorkerContMutex);
+  n = std::min(n, static_cast<Pool::WorkerCountType>(inactiveWorkers.size()));
+	for(WorkerCountType i = 0; i < n; ++i)
+    inactiveWorkers.pop_back();
 	return n;
 }
 
-void Pool::spawnWorkers(WorkerCountType const& n)
+void Pool::spawnWorkers(WorkerCountType n)
 {
-	//'OR' makes sure the case where one of the variables is zero, is valid.
-	assert(static_cast<WorkerCountType>(workers.size() + n) > n || static_cast<WorkerCountType>(workers.size() + n) > workers.size());
-	for(WorkerCountType i = 0; i < n; ++i)
+	//'OR' makes sure the case where one of the expressions is zero, is valid.
+	assert(static_cast<WorkerCountType>(inactiveWorkers.size() + n) > n || static_cast<WorkerCountType>(inactiveWorkers.size() + n) > inactiveWorkers.size());
+	while(n-- > 0)
 	{
-		workers.emplace_back(this);
-		std::unique_lock<std::mutex> lock(workers.back().initMutex);
-		if(workers.back().isReallyInitialized == 0)
-			workers.back().initializer.wait(lock, [this](){ return workers.back().isReallyInitialized; });
+    auto workerIterator = inactiveWorkers.emplace(inactiveWorkers.end(), this);
+    workerIterator->iterator = workerIterator;
+		std::unique_lock<std::mutex> lock(workerIterator->initMutex);
+		if(workerIterator->isReallyInitialized == 0)
+			workerIterator->initializer.wait(lock, [&](){ return workerIterator->isReallyInitialized; });
 	}
 }
 

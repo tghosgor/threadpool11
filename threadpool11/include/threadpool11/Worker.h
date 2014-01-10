@@ -59,21 +59,17 @@ private:
 		
 	std::mutex initMutex;
 	std::condition_variable initializer;
-		
-	enum class Status : bool
-	{
-		DEACTIVE = 0,
-		ACTIVE = 1
-	} status;
 
 	WorkType work;
+  std::list<Worker>::iterator iterator;
 
 	std::mutex activatorMutex;
 	std::condition_variable activator;
 	bool isWorkReallyPosted;	// spurious wakeup protection
 
 	bool isReallyInitialized;
-	bool terminate;
+  
+	std::atomic<bool> terminate;
 
 	/**
 	* This should always stay at bottom so that it is called at the most end.
