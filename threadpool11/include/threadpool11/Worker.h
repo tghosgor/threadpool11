@@ -3,13 +3,13 @@ Copyright (c) 2013, Tolga HOŞGÖR
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are met: 
+modification, are permitted provided that the following conditions are met:
 
 1. Redistributions of source code must retain the above copyright notice, this
-   list of conditions and the following disclaimer. 
+   list of conditions and the following disclaimer.
 2. Redistributions in binary form must reproduce the above copyright notice,
    this list of conditions and the following disclaimer in the documentation
-   and/or other materials provided with the distribution. 
+   and/or other materials provided with the distribution.
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -23,7 +23,7 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 The views and conclusions contained in the software and documentation are those
-of the authors and should not be interpreted as representing official policies, 
+of the authors and should not be interpreted as representing official policies,
 either expressed or implied, of the FreeBSD Project.
 */
 
@@ -39,53 +39,54 @@ either expressed or implied, of the FreeBSD Project.
 
 namespace threadpool11
 {
-	
+
 class Pool;
 
 class Worker
 {
-	friend class Pool;
+  friend class Pool;
 
 public:
-	typedef std::function<void()> WorkType;
+  typedef std::function<void()> WorkType;
 
 private:
-	Worker(Worker&&);
-	Worker(Worker const&);
-	Worker& operator=(Worker&&);
-	Worker& operator=(Worker const&);
+  Worker(Worker&&);
+  Worker(Worker const&);
+  Worker& operator=(Worker&&);
+  Worker& operator=(Worker const&);
 
-	Pool* const pool;
-		
-	std::mutex initMutex;
-	std::condition_variable initializer;
+  Pool* const pool;
 
-	WorkType work;
+  std::mutex initMutex;
+  std::condition_variable initializer;
+
+  WorkType work;
   std::list<Worker>::iterator iterator;
 
-	std::mutex activatorMutex;
-	std::condition_variable activator;
-	bool isWorkReallyPosted;	// spurious wakeup protection
+  std::mutex activatorMutex;
+  std::condition_variable activator;
+  bool isWorkReallyPosted;  // spurious wakeup protection
 
-	bool isReallyInitialized;
-  
-	std::atomic<bool> terminate;
+  bool isReallyInitialized;
 
-	/**
-	* This should always stay at bottom so that it is called at the most end.
-	*/
-	std::thread thread;
+  std::atomic<bool> terminate;
+
+  /**
+  * This should always stay at bottom so that it is called at the most end.
+  */
+  std::thread thread;
 
 private:
-	void setWork(WorkType work);
-	
-	void execute();
+  void setWork(WorkType work);
+
+  void execute();
 
 public:
-	Worker(Pool* const& pool);
+  Worker(Pool* const& pool);
+  ~Worker() { };
 
-	bool operator==(Worker const& other) const;
-	bool operator==(const Worker* other) const;
+  bool operator==(Worker const& other) const;
+  bool operator==(const Worker* other) const;
 };
-	
+
 }
