@@ -27,7 +27,8 @@ of the authors and should not be interpreted as representing official policies,
 either expressed or implied, of the FreeBSD Project.
 */
 
-#include "threadpool11/threadpool11.h"
+#include "threadpool11/Pool.h"
+#include "threadpool11/Worker.h"
 
 namespace threadpool11
 {

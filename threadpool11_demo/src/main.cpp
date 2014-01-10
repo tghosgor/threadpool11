@@ -40,7 +40,7 @@ std::mutex coutMutex;
 
 void testFunc(int i) {
 	coutMutex.lock();
-	std::cout << "doing " << i << " by " << std::this_thread::get_id() << std::endl;
+	std::cout << "\tDoing " << i << " by thread id" << std::this_thread::get_id() << std::endl;
 	coutMutex.unlock();
 }
 
@@ -75,6 +75,7 @@ int main()
 			<< "thread numbers that are higher than your machine's hardware concurrency (threads that are executed "
 			<< "concurrently) except in some cases like doing file IO.\n\n";
 		{
+			std::cout << "Demo 1\n";
 			std::cout << "Executing 5 testFunc2() WITHOUT posting to thread pool:\n";
 			auto begin = std::chrono::high_resolution_clock::now();
 			testFunc2();
@@ -83,7 +84,7 @@ int main()
 			testFunc2();
 			testFunc2();
 			auto end = std::chrono::high_resolution_clock::now();
-			std::cout << ": execution took "
+			std::cout << "\texecution took "
 				<< std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() << " milliseconds.\n\n";
 		}
 
@@ -91,14 +92,14 @@ int main()
 		{
 			std::cout << "Executing 5 testFunc2() WITH posting to thread pool:\n";
 			auto begin = std::chrono::high_resolution_clock::now();
-			pool.postWork(testFunc2);
-			pool.postWork(testFunc2);
-			pool.postWork(testFunc2);
-			pool.postWork(testFunc2);
-			pool.postWork(testFunc2);
+			pool.postWork<void>(testFunc2);
+			pool.postWork<void>(testFunc2);
+			pool.postWork<void>(testFunc2);
+			pool.postWork<void>(testFunc2);
+			pool.postWork<void>(testFunc2);
 			pool.waitAll();
 			auto end = std::chrono::high_resolution_clock::now();
-			std::cout << "execution took "
+			std::cout << "\tDemo 1 took "
 				<< std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() << " milliseconds.\n\n";
 		}
 	}
@@ -107,31 +108,63 @@ int main()
 	* Demo #2
 	*/
 	{
+    std::cout << "Demo 2\n";
 		pool.increaseWorkerCountBy(50);
 		std::cout << "Posting 1.000.000 jobs.\n";
 	
 		auto begin = std::chrono::high_resolution_clock::now();
 		for(int i = 0; i < 1000000; ++i)
 		{
-			pool.postWork(testFunc3);
+			pool.postWork<void>(testFunc3);
 		}
-		
-		std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - begin).count() << std::endl;
+		auto end = std::chrono::high_resolution_clock::now();
 		
 		pool.waitAll();
-		std::cout << "Wait took: " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - begin).count() << std::endl;
+		std::cout << "Demo 2 took " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - begin).count() << " milliseconds.\n\n";
 	}
+    
+  std::cout << "Current worker count is " << pool.getWorkerCount() << " (Active: " << pool.getActiveWorkerCount() << ", Inactive: " << pool.getInactiveWorkerCount() << ") . Setting worker count to 5 again... ";
+  pool.decreaseWorkerCountBy(pool.getWorkerCount() - 5);
+  std::cout << "The new worker count is " << pool.getWorkerCount() << ".\n\n";
 
 	/**
 	* Demo #3
 	* You should always capture by value or use appropriate mutexes for reference access.
 	*/
-	/*{
+	{
+    std::cout << "Demo 3\n";
+    std::cout << "Testing lambda copy/modify:\n";
 		for (int i=0; i<20; i++) {
-			pool.postWork([=](){testFunc(i);});
+			pool.postWork<void>([=]() { testFunc(i); });
 		}
 		pool.waitAll();
-	}*/
+    std::cout << "Done.\n\n";
+	}
+  
+	/**
+	* Demo #4
+	* Using futures.
+	*/
+  {
+    std::cout << "Demo 4\n";
+    std::cout << "WARNING: This test's output may be distorted because no synchronization on std::cout is done.\n";
+    std::array<std::future<float>, 20> futures;
+    
+		auto begin = std::chrono::high_resolution_clock::now();
+    for (int i=0; i<20; i++) {
+      futures[i] = pool.postWork<float>([=]() {
+        std::cout << "\t  Executed pow(" << i << ", 2) by thread id " << std::this_thread::get_id() << std::endl;
+        return pow(i, 2);
+      });
+    }
+    
+    for (int i=0; i<20; i++) {
+      std::cout << "\tfuture[" << i << "] value: " << futures[i].get() << std::endl;
+    }
+		auto end = std::chrono::high_resolution_clock::now();
+    std::cout << "\tDemo 4 took "
+      << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() << " milliseconds.\n\n";
+  }
 
 	/**
 	* Test case for Issue #1 (fixed): Pool::postWork waiting forever, due to posting work before all threads in pool

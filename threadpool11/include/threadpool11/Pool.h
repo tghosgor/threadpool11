@@ -36,11 +36,12 @@ either expressed or implied, of the FreeBSD Project.
 #include <atomic>
 #include <condition_variable>
 #include <deque>
+#include <future>
 #include <list>
 #include <memory>
 #include <mutex>
 
-#include "threadpool11/Worker/Worker.h"
+#include "threadpool11/Worker.h"
 
 #ifdef WIN32
 	#ifdef threadpool11_EXPORTING
@@ -87,17 +88,74 @@ private:
 public:
 	threadpool11_EXPORT Pool(WorkerCountType const& workerCount = std::thread::hardware_concurrency());
 	
-	threadpool11_EXPORT void postWork(Worker::WorkType work);
+  template<typename T>
+	threadpool11_EXPORT 
+  std::future<T> postWork(std::function<T()> callable)
+  {
+    auto promise = new std::promise<T>;
+    auto future = promise->get_future();
+    {
+      std::lock_guard<std::mutex> lock(workerContainerMutex);
+      
+      if(activeWorkerCount < workers.size())
+      {
+        for(auto& it : workers)
+        {
+          if(it.status == Worker::Status::DEACTIVE)
+          {
+            ++activeWorkerCount;
+            //TODO: how to avoid copy of callable into this lambda and the ones below?
+            it.setWork([=](){ promise->set_value(callable()); delete promise; });
+            return future;
+          }
+        }
+      }
+    }
+  
+    std::lock_guard<std::mutex> lock(enqueuedWorkMutex);
+    enqueuedWork.emplace_back([=](){ promise->set_value(callable()); delete promise; });
+    return future;
+  }
+  
 	threadpool11_EXPORT void waitAll();
 	threadpool11_EXPORT void joinAll();
 	
 	threadpool11_EXPORT WorkerCountType getWorkQueueCount() const;
+  threadpool11_EXPORT WorkerCountType getWorkerCount() const;
 	threadpool11_EXPORT WorkerCountType getActiveWorkerCount() const;
 	threadpool11_EXPORT WorkerCountType getInactiveWorkerCount() const;
 		
 	threadpool11_EXPORT void increaseWorkerCountBy(WorkerCountType const& n);
 	threadpool11_EXPORT WorkerCountType decreaseWorkerCountBy(WorkerCountType n);
 };
+  
+template<>
+threadpool11_EXPORT inline
+std::future<void> Pool::postWork<void>(std::function<void()> callable)
+{
+  auto promise = new std::promise<void>;
+  auto future = promise->get_future();
+  {
+    std::lock_guard<std::mutex> lock(workerContainerMutex);
+      
+    if(activeWorkerCount < workers.size())
+    {
+      for(auto& it : workers)
+      {
+        if(it.status == Worker::Status::DEACTIVE)
+        {
+          ++activeWorkerCount;
+          it.setWork([=]() { callable(); promise->set_value(); delete promise; });
+          return future;
+        }
+      }
+    }
+  }
+  
+  std::lock_guard<std::mutex> lock(enqueuedWorkMutex);
+  enqueuedWork.emplace_back([=](){ callable(); promise->set_value(); delete promise; });
+  return future;
+}
 
 #undef threadpool11_EXPORT
 #undef threadpool11_EXPORTING

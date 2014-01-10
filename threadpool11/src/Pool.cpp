@@ -29,7 +29,7 @@ either expressed or implied, of the FreeBSD Project.
 
 #include <algorithm>
 
-#include "threadpool11/threadpool11.h"
+#include "threadpool11/Pool.h"
 
 namespace threadpool11
 {
@@ -40,30 +40,6 @@ Pool::Pool(WorkerCountType const& workerCount) :
 	workCallCounter(0)*/
 {
 	spawnWorkers(workerCount);
-}
-	
-void Pool::postWork(Worker::WorkType work)
-{
-	{
-		std::lock_guard<std::mutex> lock(workerContainerMutex);
-		
-		if(activeWorkerCount < workers.size())
-		{
-			for(auto& it : workers)
-			{
-				if(it.status == Worker::Status::DEACTIVE)
-				{
-					++activeWorkerCount;
-					it.setWork(std::move(work));
-					return;
-				}
-			}
-		}
-	}
-	
-	enqueuedWorkMutex.lock();
-	enqueuedWork.emplace_back(std::move(work));
-	enqueuedWorkMutex.unlock();
 }
 
 void Pool::waitAll()
@@ -102,6 +78,12 @@ Pool::WorkerCountType Pool::getWorkQueueCount() const
 	return enqueuedWork.size();
 }
 
+Pool::WorkerCountType Pool::getWorkerCount() const
+{
+	std::lock_guard<std::mutex> l(workerContainerMutex);
+  return workers.size();
+}
+
 Pool::WorkerCountType Pool::getActiveWorkerCount() const
 {
 	std::lock_guard<std::mutex> l(workerContainerMutex);
@@ -123,13 +105,14 @@ void Pool::increaseWorkerCountBy(WorkerCountType const& n)
 Pool::WorkerCountType Pool::decreaseWorkerCountBy(WorkerCountType n)
 {
 	std::lock_guard<std::mutex> l(workerContainerMutex);
-	n = std::min(n, static_cast<Pool::WorkerCountType>(workers.size()));
-	for(unsigned int i = workers.size() - 1; i > workers.size() - n; --i)
+  n = std::min(n, static_cast<Pool::WorkerCountType>(workers.size()));
+	for(size_t i = 0; i < n; ++i)
 	{
-		workers[i].terminate = true;
-		workers[i].isWorkReallyPosted = true;
-		workers[i].activator.notify_one();
-		workers[i].thread.join();
+		workers.back().terminate = true;
+		workers.back().isWorkReallyPosted = true;
+		workers.back().activator.notify_one();
+		workers.back().thread.join();
+    workers.pop_back();
 	}
 	return n;
 }
