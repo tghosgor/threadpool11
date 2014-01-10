@@ -135,7 +135,7 @@ int main()
   std::cout << "Current worker count is " << pool.getActiveWorkerCount() + pool.getInactiveWorkerCount()
             << " (Active: " << pool.getActiveWorkerCount() << ", Inactive: " << pool.getInactiveWorkerCount()
             << ") . Setting worker count to 5 again... ";
-  pool.decreaseWorkerCountBy(pool.getInactiveWorkerCount() - 5);
+  pool.decreaseWorkerCountBy(pool.getInactiveWorkerCount() - 2);
   std::cout << "The new worker count is " << pool.getInactiveWorkerCount() << ".\n\n";
 
   /**
