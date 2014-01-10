@@ -35,6 +35,7 @@ either expressed or implied, of the FreeBSD Project.
 #include <cstdio>
 
 #include "threadpool11/threadpool11.h"
+#include "threadpool11/Helper.hpp"
 
 std::mutex coutMutex;
 
@@ -61,7 +62,7 @@ void testFunc3()
 int main()
 {
 	threadpool11::Pool pool(5);
-
+  
 	std::cout << "Your machine's hardware concurrency is " << std::thread::hardware_concurrency() << std::endl << std::endl;
 
 	/**

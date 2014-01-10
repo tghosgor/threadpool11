@@ -42,6 +42,7 @@ either expressed or implied, of the FreeBSD Project.
 #include <mutex>
 
 #include "threadpool11/Worker.h"
+#include "threadpool11/Helper.hpp"
 
 #ifdef WIN32
 	#ifdef threadpool11_EXPORTING
@@ -104,16 +105,18 @@ public:
           if(it.status == Worker::Status::DEACTIVE)
           {
             ++activeWorkerCount;
-            //TODO: how to avoid copy of callable into this lambda and the ones below?
-            it.setWork([=](){ promise->set_value(callable()); delete promise; });
+            //TODO: how to avoid copy of callable into this lambda and the ones below? in a decent way!
+            auto move_hack = make_move_on_copy(std::move(callable));
+            it.setWork([move_hack, promise](){ promise->set_value((move_hack.Value())()); delete promise; });
             return future;
           }
         }
       }
     }
   
+    auto move_hack = make_move_on_copy(std::move(callable));
     std::lock_guard<std::mutex> lock(enqueuedWorkMutex);
-    enqueuedWork.emplace_back([=](){ promise->set_value(callable()); delete promise; });
+    enqueuedWork.emplace_back([move_hack, promise](){ promise->set_value((move_hack.Value())()); delete promise; });
     return future;
   }
   
@@ -145,15 +148,17 @@ std::future<void> Pool::postWork<void>(std::function<void()> callable)
         if(it.status == Worker::Status::DEACTIVE)
         {
           ++activeWorkerCount;
-          it.setWork([=]() { callable(); promise->set_value(); delete promise; });
+          auto move_hack = make_move_on_copy(std::move(callable));
+          it.setWork([move_hack, promise]() { (move_hack.Value())(); promise->set_value(); delete promise; });
           return future;
         }
       }
     }
   }
   
+  auto move_hack = make_move_on_copy(std::move(callable));
   std::lock_guard<std::mutex> lock(enqueuedWorkMutex);
-  enqueuedWork.emplace_back([=](){ callable(); promise->set_value(); delete promise; });
+  enqueuedWork.emplace_back([move_hack, promise](){ (move_hack.Value())(); promise->set_value(); delete promise; });
   return future;
 }
 
