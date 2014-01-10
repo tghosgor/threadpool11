@@ -2,12 +2,11 @@ ADD_DEFINITIONS(-Dthreadpool11_EXPORTING)
 
 INCLUDE_DIRECTORIES(include)
 
+ADD_LIBRARY(threadpool11 STATIC src/Pool.cpp src/Worker.cpp)
+
 if(MAKE_CXX_COMPILER_ID MATCHES GNU OR 
     CMAKE_CXX_COMPILER_ID MATCHES Clang)
-	ADD_LIBRARY(threadpool11 STATIC src/Pool.cpp src/Worker.cpp)
 	TARGET_LINK_LIBRARIES(threadpool11 pthread)
-elseif(MSVC)
-	ADD_LIBRARY(threadpool11 SHARED src/Pool.cpp src/Worker.cpp)
 endif()
 
 if(MAKE_CXX_COMPILER_ID MATCHES GNU OR 

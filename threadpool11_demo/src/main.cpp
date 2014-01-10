@@ -153,7 +153,7 @@ int main()
 		auto begin = std::chrono::high_resolution_clock::now();
     for (int i=0; i<20; i++) {
       futures[i] = pool.postWork<float>([=]() {
-        std::cout << "\t  Executed pow(" << i << ", 2) by thread id " << std::this_thread::get_id() << std::endl;
+        std::cout << "\tExecuted pow(" << i << ", 2) by thread id " << std::this_thread::get_id() << std::endl;
         return pow(i, 2);
       });
     }
@@ -162,7 +162,7 @@ int main()
       std::cout << "\tfuture[" << i << "] value: " << futures[i].get() << std::endl;
     }
 		auto end = std::chrono::high_resolution_clock::now();
-    std::cout << "\tDemo 4 took "
+    std::cout << "Demo 4 took "
       << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() << " milliseconds.\n\n";
   }
 

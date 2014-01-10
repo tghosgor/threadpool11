@@ -61,10 +61,10 @@ void Pool::joinAll()
 	for(auto& it : workers)
 	{
 		it.terminate = true;
-		std::unique_lock<std::mutex> lock(it.activatorMutex);
+		it.activatorMutex.lock();
 		it.isWorkReallyPosted = true;
 		it.activator.notify_one();
-		lock.unlock();
+		it.activatorMutex.unlock();
 		it.thread.join();
 	}
 	workers.clear();
@@ -109,8 +109,10 @@ Pool::WorkerCountType Pool::decreaseWorkerCountBy(WorkerCountType n)
 	for(size_t i = 0; i < n; ++i)
 	{
 		workers.back().terminate = true;
+    workers.back().activatorMutex.lock();
 		workers.back().isWorkReallyPosted = true;
 		workers.back().activator.notify_one();
+    workers.back().activatorMutex.unlock();
 		workers.back().thread.join();
     workers.pop_back();
 	}
