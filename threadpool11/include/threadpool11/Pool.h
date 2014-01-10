@@ -62,7 +62,7 @@ class Pool
 friend class Worker;
 
 public:
-	typedef size_t WorkerCountType;
+	typedef unsigned int WorkerCountType;
 
 private:
 	Pool(Pool&&);

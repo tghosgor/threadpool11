@@ -106,7 +106,7 @@ Pool::WorkerCountType Pool::decreaseWorkerCountBy(WorkerCountType n)
 {
 	std::lock_guard<std::mutex> l(workerContainerMutex);
   n = std::min(n, static_cast<Pool::WorkerCountType>(workers.size()));
-	for(size_t i = 0; i < n; ++i)
+	for(Pool::WorkerCountType i = 0; i < n; ++i)
 	{
 		workers.back().terminate = true;
     workers.back().activatorMutex.lock();
