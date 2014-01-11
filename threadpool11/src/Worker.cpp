@@ -44,16 +44,6 @@ Worker::Worker(Pool* const& pool) :
   //std::cout << std::this_thread::get_id() << " Worker created" << std::endl;
 }
 
-Worker::~Worker()
-{
-  terminate = true;
-  activatorMutex.lock();
-  isWorkReallyPosted = true;
-  activator.notify_one();
-  activatorMutex.unlock();
-  thread.join();
-}
-
 inline bool Worker::operator==(Worker const& other) const
 {
   return thread.get_id() == other.thread.get_id();
@@ -83,14 +73,17 @@ void Worker::execute()
     activator.wait(lock, [this](){ return isWorkReallyPosted; });
   }
 
-  while(!terminate)
+  while(true)
   {
     std::unique_lock<std::mutex> lock(activatorMutex);
     isWorkReallyPosted = false;
+
     WORK:
+    if(terminate)
+      break;
     work();
     {
-      std::lock_guard<std::mutex> enqueueLock(pool->enqueuedWorkMutex);
+      std::unique_lock<std::mutex> enqueueLock(pool->enqueuedWorkMutex);
       if(pool->enqueuedWork.size() > 0)
       {
         work = std::move(pool->enqueuedWork.front());
@@ -98,19 +91,23 @@ void Worker::execute()
         goto WORK;
       }
 
+      //Pool::joinAll could acquire *WorkerContMutex a worker could come here. ~Worker will hang.
+
       {
         std::lock(pool->activeWorkerContMutex, pool->inactiveWorkerContMutex);
+
         auto end = iterator;
         ++end;
         pool->inactiveWorkers.splice(pool->inactiveWorkers.end(), pool->activeWorkers, iterator, end);
-        iterator = --pool->inactiveWorkers.end();
+        //iterator = --pool->inactiveWorkers.end();
 
         pool->activeWorkerContMutex.unlock();
         pool->inactiveWorkerContMutex.unlock();
       }
-    }
+      enqueueLock.unlock();
 
-    activator.wait(lock, [this](){ return isWorkReallyPosted; });
+      activator.wait(lock, [this](){ return isWorkReallyPosted; });
+    }
   }
 }
 

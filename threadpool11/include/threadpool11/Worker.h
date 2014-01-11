@@ -47,6 +47,12 @@ class Worker
   friend class Pool;
 
 public:
+  enum class WorkPrio
+  {
+    DEFERRED = 0,
+    IMMIDIATE
+  };
+
   typedef std::function<void()> WorkType;
 
 private:
@@ -83,7 +89,7 @@ private:
 
 public:
   Worker(Pool* const& pool);
-  ~Worker();
+  ~Worker() { };
 
   bool operator==(Worker const& other) const;
   bool operator==(const Worker* other) const;

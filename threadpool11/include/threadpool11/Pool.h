@@ -99,15 +99,18 @@ public:
    */
   template<typename T>
   threadpool11_EXPORT
-  std::future<T> postWork(std::function<T()> callable);
+  std::future<T> postWork(std::function<T()> callable, Worker::WorkPrio const& type = Worker::WorkPrio::DEFERRED);
 
   /**
    * This function joins all the threads in the thread pool as fast as possible.
    * All the posted works are NOT GUARANTEED to be finished before the worker threads
-   * are destroyed and this function returns. Enqueued works are wiped out.
+   * are destroyed and this function returns. Enqueued works stay as they are.
    *
    * However, ongoing works in the threads in the pool are guaranteed
    * to finish before that threads are terminated.
+   *
+   * Properties: NOT thread-safe.
+   *
    */
   threadpool11_EXPORT
   void joinAll();
@@ -152,7 +155,7 @@ public:
 
 template<typename T>
 threadpool11_EXPORT inline
-std::future<T> Pool::postWork(std::function<T()> callable)
+std::future<T> Pool::postWork(std::function<T()> callable, Worker::WorkPrio const& type)
 {
   std::promise<T> promise;
   auto future = promise.get_future();
@@ -170,10 +173,11 @@ std::future<T> Pool::postWork(std::function<T()> callable)
   {
     std::lock_guard<std::mutex> activeWorkersLock(activeWorkerContMutex);
     activeWorkers.splice(activeWorkers.end(), inactiveWorkers, --inactiveWorkers.end(), inactiveWorkers.end());
-      //TODO: if the element is inserted at the ::end() no need to look it up again and can use std::forward_list
-    auto workerIterator = --activeWorkers.end();
-    workerIterator->iterator = workerIterator;
-    workerIterator->setWork([move_callable, move_promise]() mutable { move_promise.Value().set_value((move_callable.Value())()); });
+    /* TODO: std::forward_list? */
+    /* iterators are also moved to activeWorkers and are valid according to the C++11 standard */
+    //auto workerIterator = --activeWorkers.end();
+    //workerIterator->iterator = workerIterator;
+    activeWorkers.back().setWork([move_callable, move_promise]() mutable { move_promise.Value().set_value((move_callable.Value())()); });
     return future;
   }
 
@@ -183,12 +187,11 @@ std::future<T> Pool::postWork(std::function<T()> callable)
 
 template<>
 threadpool11_EXPORT inline
-std::future<void> Pool::postWork(std::function<void()> callable)
+std::future<void> Pool::postWork(std::function<void()> callable, Worker::WorkPrio const& type)
 {
   std::promise<void> promise;
   auto future = promise.get_future();
 
-  /* TODO: how to avoid copy of callable into this lambda and the ones below? In a decent way... */
   /* evil move hack */
   auto move_callable = make_move_on_copy(std::move(callable));
   /* evil move hack */
@@ -201,10 +204,9 @@ std::future<void> Pool::postWork(std::function<void()> callable)
   {
     std::lock_guard<std::mutex> activeWorkersLock(activeWorkerContMutex);
     activeWorkers.splice(activeWorkers.end(), inactiveWorkers, --inactiveWorkers.end(), inactiveWorkers.end());
-      //TODO: if the element is inserted at the ::end() no need to look it up again and can use std::forward_list
-    auto workerIterator = --activeWorkers.end();
-    workerIterator->iterator = workerIterator;
-    workerIterator->setWork([move_callable, move_promise]() mutable { (move_callable.Value())(); move_promise.Value().set_value(); });
+    //auto workerIterator = --activeWorkers.end();
+    //workerIterator->iterator = workerIterator;
+    activeWorkers.back().setWork([move_callable, move_promise]() mutable { (move_callable.Value())(); move_promise.Value().set_value(); });
     return future;
   }
 

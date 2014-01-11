@@ -40,38 +40,55 @@ Pool::Pool(WorkerCountType const& workerCount)
 }
 
 Pool::~Pool()
-{ }
+{
+  joinAll();
+}
 
 void Pool::joinAll()
 {
+  do
   {
-    std::lock_guard<std::mutex> l(inactiveWorkerContMutex);
-    for(auto& it : inactiveWorkers)
+    size_t nInactiveWorkers;
+    size_t nActiveWorkers;
+
+    std::lock(activeWorkerContMutex, inactiveWorkerContMutex);
+
+    nInactiveWorkers = inactiveWorkers.size();
+    nActiveWorkers = activeWorkers.size();
+
+    auto activeWorkIt = --activeWorkers.end();
+    auto inactiveWorkIt = --inactiveWorkers.end();
+
+    activeWorkerContMutex.unlock();
+    inactiveWorkerContMutex.unlock();
+
+    if(nInactiveWorkers == 0 && nActiveWorkers == 0)
+      break;
+
+    if(nInactiveWorkers > 0)
     {
-      it.terminate = true;
-      it.activatorMutex.lock();
-      it.isWorkReallyPosted = true;
-      it.activator.notify_one();
-      it.activatorMutex.unlock();
-      it.thread.join();
+      inactiveWorkIt->terminate = 1;
+      std::unique_lock<std::mutex> activateLock(inactiveWorkIt->activatorMutex);
+      inactiveWorkIt->isWorkReallyPosted = true;
+      inactiveWorkIt->activator.notify_one();
+      activateLock.unlock();
+      inactiveWorkIt->thread.join();
+      std::lock_guard<std::mutex> contLock(inactiveWorkerContMutex);
+      inactiveWorkers.erase(inactiveWorkIt);
     }
-    inactiveWorkers.clear();
-  }
-  {
-    std::lock_guard<std::mutex> l(activeWorkerContMutex);
-    for(auto& it : activeWorkers)
+
+    if(nActiveWorkers > 0)
     {
-      it.terminate = true;
-      it.activatorMutex.lock();
-      it.isWorkReallyPosted = true;
-      it.activator.notify_one();
-      it.activatorMutex.unlock();
-      it.thread.join();
+      activeWorkIt->terminate = 1;
+      std::unique_lock<std::mutex> activateLock(activeWorkIt->activatorMutex);
+      activeWorkIt->isWorkReallyPosted = true;
+      activeWorkIt->activator.notify_one();
+      activateLock.unlock();
+      activeWorkIt->thread.join();
+      std::lock_guard<std::mutex> contLock(activeWorkerContMutex);
+      activeWorkers.erase(activeWorkIt);
     }
-    activeWorkers.clear();
-  }
-  //No mutex here since no threads left.
-  enqueuedWork.clear();
+  } while(true);
 }
 
 Pool::WorkerCountType Pool::getWorkQueueCount() const
