@@ -4,7 +4,7 @@ threadpool11
 
 ### Cross-platform thread pool implementation using C++11 features.
 
-You can find the *VERY EASY* API documentation [API on this wiki page].
+You can find the *VERY EASY* API documentation on header annotations.
 
 This project has been initially developed in just a few hours of free time as I could not find a simple lightweight thread pooling library for my needs.
 
@@ -14,4 +14,4 @@ I will be glad to hear about the suggestions/ideas you have about the project, v
 
 All non '_-dev_' branches are safe to use but prefer the latest version.
 
-###For more information and API documentation, head on to the [wiki](https://github.com/tghosgor/threadpool11/wiki/). There is also a demo application in repository.
+###For more information, head on to the [wiki](https://github.com/tghosgor/threadpool11/wiki/). There is also a demo application in repository.
