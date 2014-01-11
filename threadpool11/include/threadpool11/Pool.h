@@ -108,19 +108,19 @@ public:
 
   /**
    * This function requires a mutex lock so you should call it
-   *  wisely if you performance is a life matter to you.
+   * wisely if you performance is a life matter to you.
    */
   threadpool11_EXPORT WorkerCountType getWorkQueueCount() const;
 
   /**
    * This function requires a mutex lock so you should call it
-   *  wisely if you performance is a life matter to you.
+   * wisely if you performance is a life matter to you.
    */
   threadpool11_EXPORT WorkerCountType getActiveWorkerCount() const;
 
   /**
    * This function requires a mutex lock so you should call it
-   *  wisely if you performance is a life matter to you.
+   * wisely if you performance is a life matter to you.
    */
   threadpool11_EXPORT WorkerCountType getInactiveWorkerCount() const;
 
@@ -130,16 +130,11 @@ public:
   threadpool11_EXPORT void increaseWorkerCountBy(WorkerCountType const& n);
 
   /**
-   * Tries to decrease the number of threads in the pool by **n*.
-   * Setting **n* higher than the number of workers has no bad effect.
+   * Tries to decrease the number of threads in the pool by n.
+   * Setting n higher than the number of inactive workers has effect.
    * If there are no active threads and you want to destroy all the threads
    * Pool::decreaseWorkerCountBy(std::numeric_limits<Pool::WorkerCountType>::max());
    * will do.
-   *
-   * This function is not an optimal implementation because it
-   * linearly looks for workers from the end of the list until it
-   * sees an active Worker. If the last workers in the list are working
-   * but others are inactive, it does not get past the inactive ones.
    */
   threadpool11_EXPORT WorkerCountType decreaseWorkerCountBy(WorkerCountType n);
 };

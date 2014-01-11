@@ -111,13 +111,13 @@ int main()
   */
   {
     std::cout << "Demo 2\n";
-    //pool.increaseWorkerCountBy(50);
-    pool.decreaseWorkerCountBy(pool.getInactiveWorkerCount() - 2);
+    pool.increaseWorkerCountBy(50);
+    //pool.decreaseWorkerCountBy(pool.getInactiveWorkerCount() - 2);
     std::cout << "Posting 1.000.000 jobs.\n";
 
     std::vector<std::future<void>> futures;
     auto begin = std::chrono::high_resolution_clock::now();
-    for(int i = 0; i < 1000000; ++i)
+    for(int i = 0; i < 3000000; ++i)
     {
       futures.emplace_back(pool.postWork<void>(testFunc3));
     }
@@ -180,7 +180,7 @@ int main()
   * Test case for Issue #1 (fixed): Pool::postWork waiting forever, due to posting work before all threads in pool
   * are properly initialized and waiting.
   */
-  /*{
+  {
     while(true)
     {
       std::cout << "Loop begin" << std::endl;
@@ -232,9 +232,11 @@ int main()
 
       std::this_thread::sleep_for(std::chrono::milliseconds(5));
     }
-  }*/
+  }
 
   std::cout << "\n\n";
+
+  getchar();
 
   pool.joinAll();
   return 0;
