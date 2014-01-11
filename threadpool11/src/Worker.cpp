@@ -80,24 +80,24 @@ void Worker::execute()
     WORK:
     work();
     {
-      std::lock_guard<std::mutex> lock(pool->enqueuedWorkMutex);
+      std::lock_guard<std::mutex> enqueueLock(pool->enqueuedWorkMutex);
       if(pool->enqueuedWork.size() > 0)
       {
         work = std::move(pool->enqueuedWork.front());
         pool->enqueuedWork.pop_front();
         goto WORK;
       }
-    }
 
-    {
-      std::lock(pool->activeWorkerContMutex, pool->inactiveWorkerContMutex);
-      auto end = iterator;
-      ++end;
-      pool->inactiveWorkers.splice(pool->inactiveWorkers.end(), pool->activeWorkers, iterator, end);
-      iterator = --pool->inactiveWorkers.end();
+      {
+        std::lock(pool->activeWorkerContMutex, pool->inactiveWorkerContMutex);
+        auto end = iterator;
+        ++end;
+        pool->inactiveWorkers.splice(pool->inactiveWorkers.end(), pool->activeWorkers, iterator, end);
+        iterator = --pool->inactiveWorkers.end();
 
-      pool->activeWorkerContMutex.unlock();
-      pool->inactiveWorkerContMutex.unlock();
+        pool->activeWorkerContMutex.unlock();
+        pool->inactiveWorkerContMutex.unlock();
+      }
     }
 
     activator.wait(lock, [this](){ return isWorkReallyPosted; });

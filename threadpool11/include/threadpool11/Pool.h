@@ -85,58 +85,42 @@ private:
 public:
   threadpool11_EXPORT Pool(WorkerCountType const& workerCount = std::thread::hardware_concurrency());
 
+  /**
+   * Posts a work to the pool for getting processed.
+   *
+   * If there are no threads left (i.e. you called Pool::joinAll(); prior to
+   * this function) all the works you post gets enqueued. If you spawn new threads in
+   * future, they will be executed then.
+   */
   template<typename T>
   threadpool11_EXPORT
-  std::future<T> postWork(std::function<T()> callable)
-  {
-    std::promise<T> promise;
-    auto future = promise.get_future();
-
-    /* TODO: how to avoid copy of callable into this lambda and the ones below? In a decent way... */
-    /* evil move hack */
-    auto move_callable = make_move_on_copy(std::move(callable));
-    /* evil move hack */
-    auto move_promise = make_move_on_copy(std::move(promise));
-    {
-      std::lock_guard<std::mutex> lock(inactiveWorkerContMutex);
-      if(inactiveWorkers.size() > 0)
-      {
-        std::lock_guard<std::mutex> lock(activeWorkerContMutex);
-        activeWorkers.splice(activeWorkers.end(), inactiveWorkers, --inactiveWorkers.end(), inactiveWorkers.end());
-        //TODO: if the element is inserted at the ::end() no need to look it up again and can use std::forward_list
-        auto workerIterator = --activeWorkers.end();
-        workerIterator->iterator = workerIterator;
-        workerIterator->setWork([move_callable, move_promise]() mutable { move_promise.Value().set_value((move_callable.Value())()); });
-        return future;
-      }
-    }
-
-    std::lock_guard<std::mutex> lock(enqueuedWorkMutex);
-    enqueuedWork.emplace_back([move_callable, move_promise]() mutable { move_promise.Value().set_value((move_callable.Value())()); });
-    return future;
-  }
+  std::future<T> postWork(std::function<T()> callable);
 
   /**
    * This function joins all the threads in the thread pool as fast as possible.
-   * All the posted works are NOT GUARANTEED to be finished before the worker threads are destroyed and
-   * this function returns. Enqueued works are wiped out.
+   * All the posted works are NOT GUARANTEED to be finished before the worker threads
+   * are destroyed and this function returns. Enqueued works are wiped out.
    *
-   * However, ongoing works in the threads in the pool are guaranteed to finish before that threads are terminated.
+   * However, ongoing works in the threads in the pool are guaranteed
+   * to finish before that threads are terminated.
    */
   threadpool11_EXPORT void joinAll();
 
   /**
-   * This function requires a mutex lock so you should call it wisely if you performance is a life matter to you.
+   * This function requires a mutex lock so you should call it
+   *  wisely if you performance is a life matter to you.
    */
   threadpool11_EXPORT WorkerCountType getWorkQueueCount() const;
 
   /**
-   * This function requires a mutex lock so you should call it wisely if you performance is a life matter to you.
+   * This function requires a mutex lock so you should call it
+   *  wisely if you performance is a life matter to you.
    */
   threadpool11_EXPORT WorkerCountType getActiveWorkerCount() const;
 
   /**
-   * This function requires a mutex lock so you should call it wisely if you performance is a life matter to you.
+   * This function requires a mutex lock so you should call it
+   *  wisely if you performance is a life matter to you.
    */
   threadpool11_EXPORT WorkerCountType getInactiveWorkerCount() const;
 
@@ -146,17 +130,50 @@ public:
   threadpool11_EXPORT void increaseWorkerCountBy(WorkerCountType const& n);
 
   /**
-   * Tries to decrease the number of threads in the pool by **n*. Setting **n* higher than the
-   * number of workers has no bad effect. If there are no active threads and you want to destroy all the threads
+   * Tries to decrease the number of threads in the pool by **n*.
+   * Setting **n* higher than the number of workers has no bad effect.
+   * If there are no active threads and you want to destroy all the threads
    * Pool::decreaseWorkerCountBy(std::numeric_limits<Pool::WorkerCountType>::max());
    * will do.
    *
-   * This function is not an optimal implementation because it linearly looks for workers from the end of the list
-   * until it sees an active Worker. If the last workers in the list are working but others are inactive,
-   * it does not get past the inactive ones.
+   * This function is not an optimal implementation because it
+   * linearly looks for workers from the end of the list until it
+   * sees an active Worker. If the last workers in the list are working
+   * but others are inactive, it does not get past the inactive ones.
    */
   threadpool11_EXPORT WorkerCountType decreaseWorkerCountBy(WorkerCountType n);
 };
+
+template<typename T>
+threadpool11_EXPORT inline
+std::future<T> Pool::postWork(std::function<T()> callable)
+{
+  std::promise<T> promise;
+  auto future = promise.get_future();
+
+  /* TODO: how to avoid copy of callable into this lambda and the ones below? In a decent way... */
+  /* evil move hack */
+  auto move_callable = make_move_on_copy(std::move(callable));
+  /* evil move hack */
+  auto move_promise = make_move_on_copy(std::move(promise));
+
+  std::lock_guard<std::mutex> enqueueLock(enqueuedWorkMutex);
+  std::lock_guard<std::mutex> inactiveWorkersLock(inactiveWorkerContMutex);
+
+  if(inactiveWorkers.size() > 0)
+  {
+    std::lock_guard<std::mutex> activeWorkersLock(activeWorkerContMutex);
+    activeWorkers.splice(activeWorkers.end(), inactiveWorkers, --inactiveWorkers.end(), inactiveWorkers.end());
+      //TODO: if the element is inserted at the ::end() no need to look it up again and can use std::forward_list
+    auto workerIterator = --activeWorkers.end();
+    workerIterator->iterator = workerIterator;
+    workerIterator->setWork([move_callable, move_promise]() mutable { move_promise.Value().set_value((move_callable.Value())()); });
+    return future;
+  }
+
+  enqueuedWork.emplace_back([move_callable, move_promise]() mutable { move_promise.Value().set_value((move_callable.Value())()); });
+  return future;
+}
 
 template<>
 threadpool11_EXPORT inline
@@ -170,21 +187,21 @@ std::future<void> Pool::postWork(std::function<void()> callable)
   auto move_callable = make_move_on_copy(std::move(callable));
   /* evil move hack */
   auto move_promise = make_move_on_copy(std::move(promise));
+
+  std::lock_guard<std::mutex> enqueueLock(enqueuedWorkMutex);
+  std::lock_guard<std::mutex> inactiveWorkersLock(inactiveWorkerContMutex);
+
+  if(inactiveWorkers.size() > 0)
   {
-    std::lock_guard<std::mutex> lock(inactiveWorkerContMutex);
-    if(inactiveWorkers.size() > 0)
-    {
-      std::lock_guard<std::mutex> lock(activeWorkerContMutex);
-      activeWorkers.splice(activeWorkers.end(), inactiveWorkers, --inactiveWorkers.end(), inactiveWorkers.end());
+    std::lock_guard<std::mutex> activeWorkersLock(activeWorkerContMutex);
+    activeWorkers.splice(activeWorkers.end(), inactiveWorkers, --inactiveWorkers.end(), inactiveWorkers.end());
       //TODO: if the element is inserted at the ::end() no need to look it up again and can use std::forward_list
-      auto workerIterator = --activeWorkers.end();
-      workerIterator->iterator = workerIterator;
-      workerIterator->setWork([move_callable, move_promise]() mutable { (move_callable.Value())(); move_promise.Value().set_value(); });
-      return future;
-    }
+    auto workerIterator = --activeWorkers.end();
+    workerIterator->iterator = workerIterator;
+    workerIterator->setWork([move_callable, move_promise]() mutable { (move_callable.Value())(); move_promise.Value().set_value(); });
+    return future;
   }
 
-  std::lock_guard<std::mutex> lock(enqueuedWorkMutex);
   enqueuedWork.emplace_back([move_callable, move_promise]() mutable { (move_callable.Value())(); move_promise.Value().set_value(); });
   return future;
 }

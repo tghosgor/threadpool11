@@ -74,7 +74,7 @@ int main()
       << "However, in real life cases, work would keep CPU busy so you would not get any real benefit using "
       << "thread numbers that are higher than your machine's hardware concurrency (threads that are executed "
       << "concurrently) except in some cases like doing file IO.\n\n";
-    {
+    /*{
       std::cout << "Demo 1\n";
       std::cout << "Executing 5 testFunc2() WITHOUT posting to thread pool:\n";
       auto begin = std::chrono::high_resolution_clock::now();
@@ -86,7 +86,7 @@ int main()
       auto end = std::chrono::high_resolution_clock::now();
       std::cout << "\texecution took "
         << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() << " milliseconds.\n\n";
-    }
+    }*/
 
     pool.increaseWorkerCountBy(5);
     {
@@ -180,50 +180,59 @@ int main()
   * Test case for Issue #1 (fixed): Pool::postWork waiting forever, due to posting work before all threads in pool
   * are properly initialized and waiting.
   */
-  /*{
+  {
     while(true)
     {
-      pool.postWork([]{std::cout << std::this_thread::get_id() << " heyyo1" << std::endl;});
-      pool.postWork([]{std::cout << std::this_thread::get_id() << " heyyo2" << std::endl;});
-      pool.postWork([]{std::cout << std::this_thread::get_id() << " heyyo3" << std::endl;});
-      pool.postWork([]{std::cout << std::this_thread::get_id() << " heyyo4" << std::endl;});
-      pool.postWork([]{std::cout << std::this_thread::get_id() << " heyyo5" << std::endl;});
-      pool.postWork([]{std::cout << std::this_thread::get_id() << " heyyo6" << std::endl;});
-      pool.postWork([]{std::cout << std::this_thread::get_id() << " heyyo7" << std::endl;});
-      pool.postWork([]{std::cout << std::this_thread::get_id() << " heyyo8" << std::endl;});
+      std::cout << "Loop begin" << std::endl;
+
+      std::vector<std::future<void>> futures;
+      futures.emplace_back(pool.postWork<void>([]{std::cout << std::this_thread::get_id() << " heyyo1" << std::endl;}));
+      futures.emplace_back(pool.postWork<void>([]{std::cout << std::this_thread::get_id() << " heyyo2" << std::endl;}));
+      futures.emplace_back(pool.postWork<void>([]{std::cout << std::this_thread::get_id() << " heyyo3" << std::endl;}));
+      futures.emplace_back(pool.postWork<void>([]{std::cout << std::this_thread::get_id() << " heyyo4" << std::endl;}));
+      futures.emplace_back(pool.postWork<void>([]{std::cout << std::this_thread::get_id() << " heyyo5" << std::endl;}));
+      futures.emplace_back(pool.postWork<void>([]{std::cout << std::this_thread::get_id() << " heyyo6" << std::endl;}));
+      futures.emplace_back(pool.postWork<void>([]{std::cout << std::this_thread::get_id() << " heyyo7" << std::endl;}));
+      futures.emplace_back(pool.postWork<void>([]{std::cout << std::this_thread::get_id() << " heyyo8" << std::endl;}));
 
       //pool[0].setWork([]{});
+      std::cout << "waiting 1" << std::endl;
+      for(auto& it : futures)
+        it.get();
+      std::cout << "wait 1 end" << std::endl;
+      futures.clear();
 
-      pool.waitAll();
-      std::cout << "wait end" << std::endl;
-      pool.postWork([]{std::cout << std::this_thread::get_id() << " 2heyyo1" << std::endl;});
-      pool.postWork([]{std::cout << std::this_thread::get_id() << " 2heyyo2" << std::endl;});
-      pool.postWork([]{std::cout << std::this_thread::get_id() << " 2heyyo3" << std::endl;});
-      pool.postWork([]{std::cout << std::this_thread::get_id() << " 2heyyo4" << std::endl;});
-      pool.waitAll();
+      futures.emplace_back(pool.postWork<void>([]{std::cout << std::this_thread::get_id() << " 2heyyo1" << std::endl;}));
+      futures.emplace_back(pool.postWork<void>([]{std::cout << std::this_thread::get_id() << " 2heyyo2" << std::endl;}));
+      futures.emplace_back(pool.postWork<void>([]{std::cout << std::this_thread::get_id() << " 2heyyo3" << std::endl;}));
+      futures.emplace_back(pool.postWork<void>([]{std::cout << std::this_thread::get_id() << " 2heyyo4" << std::endl;}));
 
-      std::cout << "2 wait end" << std::endl;
+      std::cout << "waiting 2" << std::endl;
+      for(auto& it : futures)
+        it.get();
+      std::cout << "wait 2 end" << std::endl;
+      futures.clear();
 
-      std::cout << "Active thread count: " << pool.getActiveThreadCount() << std::endl;
-      std::cout << "Inactive thread count: " << pool.getInactiveThreadCount() << std::endl;
+      std::cout << "Active thread count: " << pool.getActiveWorkerCount() << std::endl;
+      std::cout << "Inactive thread count: " << pool.getInactiveWorkerCount() << std::endl;
 
       std::cout << "Increasing thread count by 4." << std::endl;
-      pool.increaseThreadCountBy(4);
+      pool.increaseWorkerCountBy(4);
 
-      std::cout << "Active thread count: " << pool.getActiveThreadCount() << std::endl;
-      std::cout << "Inactive thread count: " << pool.getInactiveThreadCount() << std::endl;
+      std::cout << "Active thread count: " << pool.getActiveWorkerCount() << std::endl;
+      std::cout << "Inactive thread count: " << pool.getInactiveWorkerCount() << std::endl;
 
-      std::cout << "Decreasing thread count by 6." << std::endl;
-      pool.decreaseThreadCountBy(4);
+      std::cout << "Decreasing thread count by 4." << std::endl;
+      pool.decreaseWorkerCountBy(4);
 
-      std::cout << "Active thread count: " << pool.getActiveThreadCount() << std::endl;
-      std::cout << "Inactive thread count: " << pool.getInactiveThreadCount() << std::endl;
+      std::cout << "Active thread count: " << pool.getActiveWorkerCount() << std::endl;
+      std::cout << "Inactive thread count: " << pool.getInactiveWorkerCount() << std::endl;
 
       std::cout << std::endl << std::endl << std::endl << std::endl << std::endl << std::endl;
 
-      std::this_thread::sleep_for(std::chrono::milliseconds(50));
+      std::this_thread::sleep_for(std::chrono::milliseconds(5));
     }
-  }*/
+  }
 
   std::cout << "\n\n";
 
