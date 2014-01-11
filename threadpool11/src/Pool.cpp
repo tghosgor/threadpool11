@@ -39,6 +39,9 @@ Pool::Pool(WorkerCountType const& workerCount)
   spawnWorkers(workerCount);
 }
 
+Pool::~Pool()
+{ }
+
 void Pool::joinAll()
 {
   {
@@ -68,7 +71,7 @@ void Pool::joinAll()
     activeWorkers.clear();
   }
   //No mutex here since no threads left.
-  enqueuedWork.resize(0);
+  enqueuedWork.clear();
 }
 
 Pool::WorkerCountType Pool::getWorkQueueCount() const

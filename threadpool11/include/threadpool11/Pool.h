@@ -88,6 +88,7 @@ private:
 public:
   threadpool11_EXPORT
   Pool(WorkerCountType const& workerCount = std::thread::hardware_concurrency());
+  ~Pool();
 
   /**
    * Posts a work to the pool for getting processed.

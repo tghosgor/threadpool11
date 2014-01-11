@@ -44,6 +44,16 @@ Worker::Worker(Pool* const& pool) :
   //std::cout << std::this_thread::get_id() << " Worker created" << std::endl;
 }
 
+Worker::~Worker()
+{
+  terminate = true;
+  activatorMutex.lock();
+  isWorkReallyPosted = true;
+  activator.notify_one();
+  activatorMutex.unlock();
+  thread.join();
+}
+
 inline bool Worker::operator==(Worker const& other) const
 {
   return thread.get_id() == other.thread.get_id();

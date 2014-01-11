@@ -83,7 +83,7 @@ private:
 
 public:
   Worker(Pool* const& pool);
-  ~Worker() { };
+  ~Worker();
 
   bool operator==(Worker const& other) const;
   bool operator==(const Worker* other) const;
