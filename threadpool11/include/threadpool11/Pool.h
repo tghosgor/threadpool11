@@ -46,6 +46,8 @@ either expressed or implied, of the FreeBSD Project.
 #include "threadpool11/Helper.hpp"
 
 /** NO DLLS ANYMORE */
+#define threadpool11_EXPORT
+
 /*#ifdef WIN32
   #ifdef threadpool11_EXPORTING
     #define threadpool11_EXPORT __declspec(dllexport)
@@ -84,7 +86,8 @@ private:
   void spawnWorkers(WorkerCountType n);
 
 public:
-  threadpool11_EXPORT Pool(WorkerCountType const& workerCount = std::thread::hardware_concurrency());
+  threadpool11_EXPORT
+  Pool(WorkerCountType const& workerCount = std::thread::hardware_concurrency());
 
   /**
    * Posts a work to the pool for getting processed.
@@ -105,30 +108,35 @@ public:
    * However, ongoing works in the threads in the pool are guaranteed
    * to finish before that threads are terminated.
    */
-  threadpool11_EXPORT void joinAll();
+  threadpool11_EXPORT
+  void joinAll();
 
   /**
    * This function requires a mutex lock so you should call it
    * wisely if you performance is a life matter to you.
    */
-  threadpool11_EXPORT WorkerCountType getWorkQueueCount() const;
+  threadpool11_EXPORT
+  WorkerCountType getWorkQueueCount() const;
 
   /**
    * This function requires a mutex lock so you should call it
    * wisely if you performance is a life matter to you.
    */
-  threadpool11_EXPORT WorkerCountType getActiveWorkerCount() const;
+  threadpool11_EXPORT
+  WorkerCountType getActiveWorkerCount() const;
 
   /**
    * This function requires a mutex lock so you should call it
    * wisely if you performance is a life matter to you.
    */
-  threadpool11_EXPORT WorkerCountType getInactiveWorkerCount() const;
+  threadpool11_EXPORT
+  WorkerCountType getInactiveWorkerCount() const;
 
   /**
    * Increases the number of threads in the pool by n.
    */
-  threadpool11_EXPORT void increaseWorkerCountBy(WorkerCountType const& n);
+  threadpool11_EXPORT
+  void increaseWorkerCountBy(WorkerCountType const& n);
 
   /**
    * Tries to decrease the number of threads in the pool by n.
@@ -137,7 +145,8 @@ public:
    * Pool::decreaseWorkerCountBy(std::numeric_limits<Pool::WorkerCountType>::max());
    * will do.
    */
-  threadpool11_EXPORT WorkerCountType decreaseWorkerCountBy(WorkerCountType n);
+  threadpool11_EXPORT
+  WorkerCountType decreaseWorkerCountBy(WorkerCountType n);
 };
 
 template<typename T>
