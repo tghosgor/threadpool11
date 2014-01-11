@@ -111,13 +111,12 @@ int main()
   */
   {
     std::cout << "Demo 2\n";
-    pool.increaseWorkerCountBy(50);
-    //pool.decreaseWorkerCountBy(pool.getInactiveWorkerCount() - 2);
+    pool.decreaseWorkerCountBy(pool.getInactiveWorkerCount() - std::thread::hardware_concurrency());
     std::cout << "Posting 1.000.000 jobs.\n";
 
     std::vector<std::future<void>> futures;
     auto begin = std::chrono::high_resolution_clock::now();
-    for(int i = 0; i < 3000000; ++i)
+    for(int i = 0; i < 1000000; ++i)
     {
       futures.emplace_back(pool.postWork<void>(testFunc3));
     }
@@ -135,7 +134,7 @@ int main()
   std::cout << "Current worker count is " << pool.getActiveWorkerCount() + pool.getInactiveWorkerCount()
             << " (Active: " << pool.getActiveWorkerCount() << ", Inactive: " << pool.getInactiveWorkerCount()
             << ") . Setting worker count to 5 again... ";
-  pool.decreaseWorkerCountBy(pool.getInactiveWorkerCount() - 2);
+  pool.increaseWorkerCountBy(std::min<threadpool11::Pool::WorkerCountType>(5, 5 - pool.getInactiveWorkerCount()));
   std::cout << "The new worker count is " << pool.getInactiveWorkerCount() << ".\n\n";
 
   /**
@@ -163,7 +162,8 @@ int main()
     auto begin = std::chrono::high_resolution_clock::now();
     for (int i=0; i<20; i++) {
       futures[i] = pool.postWork<float>([=]() {
-        std::cout << "\tExecuted pow(" << i << ", 2) by thread id " << std::this_thread::get_id() << std::endl;
+        std::cout << "\tExecuted pow(" << i << ", 2) by thread id "
+                  << std::this_thread::get_id() << std::endl;
         return pow(i, 2);
       });
     }
@@ -173,14 +173,15 @@ int main()
     }
     auto end = std::chrono::high_resolution_clock::now();
     std::cout << "Demo 4 took "
-      << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() << " milliseconds.\n\n";
+              << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count()
+              << " milliseconds.\n\n";
   }
 
   /**
   * Test case for Issue #1 (fixed): Pool::postWork waiting forever, due to posting work before all threads in pool
   * are properly initialized and waiting.
   */
-  {
+  /*{
     while(true)
     {
       std::cout << "Loop begin" << std::endl;
@@ -232,11 +233,9 @@ int main()
 
       std::this_thread::sleep_for(std::chrono::milliseconds(5));
     }
-  }
+  }*/
 
-  std::cout << "\n\n";
-
-  getchar();
+  std::cout << std::endl << std::endl;
 
   pool.joinAll();
   return 0;
