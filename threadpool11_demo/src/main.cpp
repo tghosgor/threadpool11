@@ -180,7 +180,7 @@ int main()
   * Test case for Issue #1 (fixed): Pool::postWork waiting forever, due to posting work before all threads in pool
   * are properly initialized and waiting.
   */
-  {
+  /*{
     while(true)
     {
       std::cout << "Loop begin" << std::endl;
@@ -232,7 +232,7 @@ int main()
 
       std::this_thread::sleep_for(std::chrono::milliseconds(5));
     }
-  }
+  }*/
 
   std::cout << "\n\n";
 
