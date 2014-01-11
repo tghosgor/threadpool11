@@ -45,7 +45,8 @@ either expressed or implied, of the FreeBSD Project.
 #include "threadpool11/Worker.h"
 #include "threadpool11/Helper.hpp"
 
-#ifdef WIN32
+/** NO DLLS ANYMORE */
+/*#ifdef WIN32
   #ifdef threadpool11_EXPORTING
     #define threadpool11_EXPORT __declspec(dllexport)
   #else
@@ -53,7 +54,7 @@ either expressed or implied, of the FreeBSD Project.
   #endif
 #else
   #define threadpool11_EXPORT
-#endif
+#endif*/
 
 namespace threadpool11
 {
