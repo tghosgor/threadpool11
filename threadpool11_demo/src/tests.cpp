@@ -5,8 +5,8 @@
 #include "threadpool11/threadpool11.h"
 
 #define TEST_1
-//#define TEST_2
-//#define TEST_0
+#define TEST_2
+#define TEST_0
 
 int recursiveWork(threadpool11::Pool & pool, int depth ){
     if(depth<=0)
@@ -18,8 +18,8 @@ int recursiveWork(threadpool11::Pool & pool, int depth ){
 
 int main(int argc, char *argv[]){
     try{
-        int threads = 10;
-        int recursion = 10;
+        int threads = 20;
+        int recursion = 50;
         int initial_jobs = 10000;
         auto t0 = std::chrono::high_resolution_clock::now();
         #ifdef TEST_2
