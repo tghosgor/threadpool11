@@ -45,7 +45,7 @@ either expressed or implied, of the FreeBSD Project.
 #include "threadpool11/Worker.h"
 #include "threadpool11/Helper.hpp"
 
-/** NO DLLS ANYMORE */
+/*! NO DLLS ANYMORE */
 #define threadpool11_EXPORT
 
 /*#ifdef WIN32
@@ -90,7 +90,7 @@ public:
   Pool(WorkerCountType const& workerCount = std::thread::hardware_concurrency());
   ~Pool();
 
-  /**
+  /*!
    * Posts a work to the pool for getting processed.
    *
    * If there are no threads left (i.e. you called Pool::joinAll(); prior to
@@ -101,7 +101,7 @@ public:
   threadpool11_EXPORT
   std::future<T> postWork(std::function<T()> callable, Worker::WorkPrio const& type = Worker::WorkPrio::DEFERRED);
 
-  /**
+  /*!
    * This function joins all the threads in the thread pool as fast as possible.
    * All the posted works are NOT GUARANTEED to be finished before the worker threads
    * are destroyed and this function returns. Enqueued works stay as they are.
@@ -115,34 +115,34 @@ public:
   threadpool11_EXPORT
   void joinAll();
 
-  /**
+  /*!
    * This function requires a mutex lock so you should call it
    * wisely if you performance is a life matter to you.
    */
   threadpool11_EXPORT
   WorkerCountType getWorkQueueCount() const;
 
-  /**
+  /*!
    * This function requires a mutex lock so you should call it
    * wisely if you performance is a life matter to you.
    */
   threadpool11_EXPORT
   WorkerCountType getActiveWorkerCount() const;
 
-  /**
+  /*!
    * This function requires a mutex lock so you should call it
    * wisely if you performance is a life matter to you.
    */
   threadpool11_EXPORT
   WorkerCountType getInactiveWorkerCount() const;
 
-  /**
+  /*!
    * Increases the number of threads in the pool by n.
    */
   threadpool11_EXPORT
   void increaseWorkerCountBy(WorkerCountType const& n);
 
-  /**
+  /*!
    * Tries to decrease the number of threads in the pool by n.
    * Setting n higher than the number of inactive workers has effect.
    * If there are no active threads and you want to destroy all the threads

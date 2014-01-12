@@ -238,5 +238,7 @@ int main()
   std::cout << std::endl << std::endl;
 
   pool.joinAll();
+
+  getchar();
   return 0;
 };
