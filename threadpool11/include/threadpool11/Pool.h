@@ -99,7 +99,7 @@ public:
    */
   template<typename T>
   threadpool11_EXPORT
-  std::future<T> postWork(std::function<T()> callable, Worker::WorkPrio const& type = Worker::WorkPrio::DEFERRED);
+  std::future<T> postWork(std::function<T()> callable, Worker::WorkPrio const type = Worker::WorkPrio::DEFERRED);
 
   /*!
    * This function joins all the threads in the thread pool as fast as possible.
@@ -155,7 +155,7 @@ public:
 
 template<typename T>
 threadpool11_EXPORT inline
-std::future<T> Pool::postWork(std::function<T()> callable, Worker::WorkPrio const& type)
+std::future<T> Pool::postWork(std::function<T()> callable, Worker::WorkPrio const type)
 {
   std::promise<T> promise;
   auto future = promise.get_future();
@@ -173,7 +173,6 @@ std::future<T> Pool::postWork(std::function<T()> callable, Worker::WorkPrio cons
   {
     std::lock_guard<std::mutex> activeWorkersLock(activeWorkerContMutex);
     activeWorkers.splice(activeWorkers.end(), inactiveWorkers, --inactiveWorkers.end(), inactiveWorkers.end());
-    /* TODO: std::forward_list? */
     /* iterators are also moved to activeWorkers and are valid according to the C++11 standard */
     //auto workerIterator = --activeWorkers.end();
     //workerIterator->iterator = workerIterator;
@@ -187,7 +186,7 @@ std::future<T> Pool::postWork(std::function<T()> callable, Worker::WorkPrio cons
 
 template<>
 threadpool11_EXPORT inline
-std::future<void> Pool::postWork(std::function<void()> callable, Worker::WorkPrio const& type)
+std::future<void> Pool::postWork(std::function<void()> callable, Worker::WorkPrio const type)
 {
   std::promise<void> promise;
   auto future = promise.get_future();
@@ -204,8 +203,6 @@ std::future<void> Pool::postWork(std::function<void()> callable, Worker::WorkPri
   {
     std::lock_guard<std::mutex> activeWorkersLock(activeWorkerContMutex);
     activeWorkers.splice(activeWorkers.end(), inactiveWorkers, --inactiveWorkers.end(), inactiveWorkers.end());
-    //auto workerIterator = --activeWorkers.end();
-    //workerIterator->iterator = workerIterator;
     activeWorkers.back().setWork([move_callable, move_promise]() mutable { (move_callable.Value())(); move_promise.Value().set_value(); });
     return future;
   }

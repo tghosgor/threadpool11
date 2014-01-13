@@ -91,15 +91,10 @@ void Worker::execute()
         goto WORK;
       }
 
-      //Pool::joinAll could acquire *WorkerContMutex a worker could come here. ~Worker will hang.
-
       {
         std::lock(pool->activeWorkerContMutex, pool->inactiveWorkerContMutex);
 
-        auto end = iterator;
-        ++end;
-        pool->inactiveWorkers.splice(pool->inactiveWorkers.end(), pool->activeWorkers, iterator, end);
-        //iterator = --pool->inactiveWorkers.end();
+        pool->inactiveWorkers.splice(pool->inactiveWorkers.end(), pool->activeWorkers, iterator);
 
         pool->activeWorkerContMutex.unlock();
         pool->inactiveWorkerContMutex.unlock();

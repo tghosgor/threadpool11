@@ -27,12 +27,13 @@ of the authors and should not be interpreted as representing official policies,
 either expressed or implied, of the FreeBSD Project.
 */
 
+#include <cstdio>
+
+#include <algorithm>
+#include <array>
 #include <iostream>
 #include <mutex>
 #include <thread>
-#include <algorithm>
-
-#include <cstdio>
 
 #include "threadpool11/threadpool11.h"
 
@@ -73,7 +74,7 @@ int main()
       << "It will seem like all jobs complete in ~1 second even in a single core machine. "
       << "However, in real life cases, work would keep CPU busy so you would not get any real benefit using "
       << "thread numbers that are higher than your machine's hardware concurrency (threads that are executed "
-      << "concurrently) except in some cases like doing file IO.\n\n";
+      << "concurrently) except in some cases like doing file IO." << std::endl << std::endl;
     /*{
       std::cout << "Demo 1\n";
       std::cout << "Executing 5 testFunc2() WITHOUT posting to thread pool:\n";
@@ -90,7 +91,7 @@ int main()
 
     pool.increaseWorkerCountBy(5);
     {
-      std::cout << "Executing 5 testFunc2() WITH posting to thread pool:\n";
+      std::cout << "Executing 5 testFunc2() WITH posting to thread pool:" << std::endl;
       std::vector<std::future<void>> futures;
       auto begin = std::chrono::high_resolution_clock::now();
       futures.emplace_back(pool.postWork<void>(testFunc2));
@@ -102,7 +103,8 @@ int main()
         it.get();
       auto end = std::chrono::high_resolution_clock::now();
       std::cout << "\tDemo 1 took "
-        << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() << " milliseconds.\n\n";
+        << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() << " milliseconds."
+		<< std::endl << std::endl;
     }
   }
 
@@ -110,9 +112,9 @@ int main()
   * Demo #2
   */
   {
-    std::cout << "Demo 2\n";
+    std::cout << "Demo 2" << std::endl;
     pool.decreaseWorkerCountBy(pool.getInactiveWorkerCount() - std::thread::hardware_concurrency());
-    std::cout << "Posting 1.000.000 jobs.\n";
+    std::cout << "Posting 1.000.000 jobs." << std::endl;
 
     std::vector<std::future<void>> futures;
     auto begin = std::chrono::high_resolution_clock::now();
@@ -133,21 +135,21 @@ int main()
 
   std::cout << "Current worker count is " << pool.getActiveWorkerCount() + pool.getInactiveWorkerCount()
             << " (Active: " << pool.getActiveWorkerCount() << ", Inactive: " << pool.getInactiveWorkerCount()
-            << ") . Setting worker count to 5 again... ";
+            << ") . Setting worker count to 5 again... " << std::flush;
   pool.increaseWorkerCountBy(std::min<threadpool11::Pool::WorkerCountType>(5, 5 - pool.getInactiveWorkerCount()));
-  std::cout << "The new worker count is " << pool.getInactiveWorkerCount() << ".\n\n";
+  std::cout << "The new worker count is " << pool.getInactiveWorkerCount() << "." << std::endl << std::endl;
 
   /**
   * Demo #3
   * You should always capture by value or use appropriate mutexes for reference access.
   */
   {
-    std::cout << "Demo 3\n";
-    std::cout << "Testing lambda copy/modify:\n";
+    std::cout << "Demo 3" << std::endl;
+    std::cout << "Testing lambda copy/modify:" << std::endl;
     for (int i=0; i<20; i++) {
       pool.postWork<void>([=]() { testFunc(i); });
     }
-    std::cout << "Done.\n\n";
+    std::cout << "Done." << std::endl << std::endl;
   }
 
   /**
@@ -174,7 +176,7 @@ int main()
     auto end = std::chrono::high_resolution_clock::now();
     std::cout << "Demo 4 took "
               << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count()
-              << " milliseconds.\n\n";
+              << " milliseconds." << std::endl << std::endl;
   }
 
   /**

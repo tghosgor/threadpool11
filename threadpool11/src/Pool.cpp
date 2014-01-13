@@ -51,19 +51,24 @@ void Pool::joinAll()
     size_t nInactiveWorkers;
     size_t nActiveWorkers;
 
-    std::lock(activeWorkerContMutex, inactiveWorkerContMutex);
+	std::lock(activeWorkerContMutex, inactiveWorkerContMutex);
 
-    nInactiveWorkers = inactiveWorkers.size();
-    nActiveWorkers = activeWorkers.size();
+	std::list<Worker>::iterator activeWorkIt;
+	std::list<Worker>::iterator inactiveWorkIt;
 
-    auto activeWorkIt = --activeWorkers.end();
-    auto inactiveWorkIt = --inactiveWorkers.end();
+	{
+		std::lock_guard<std::mutex> activeWorkerContLock(activeWorkerContMutex, std::adopt_lock_t());
+		std::lock_guard<std::mutex> inactiveWorkerContLock(inactiveWorkerContMutex, std::adopt_lock_t());
 
-    activeWorkerContMutex.unlock();
-    inactiveWorkerContMutex.unlock();
+		nInactiveWorkers = inactiveWorkers.size();
+		nActiveWorkers = activeWorkers.size();
 
-    if(nInactiveWorkers == 0 && nActiveWorkers == 0)
-      break;
+		if (nInactiveWorkers == 0 && nActiveWorkers == 0)
+			break;
+
+		activeWorkIt = activeWorkers.begin();
+		inactiveWorkIt = inactiveWorkers.begin();
+	}
 
     if(nInactiveWorkers > 0)
     {
