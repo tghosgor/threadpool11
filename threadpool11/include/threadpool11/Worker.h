@@ -56,10 +56,10 @@ public:
   typedef std::function<void()> WorkType;
 
 private:
-  Worker(Worker&&);
-  Worker(Worker const&);
-  Worker& operator=(Worker&&);
-  Worker& operator=(Worker const&);
+  Worker(Worker&&) = delete;
+  Worker(Worker const&) = delete;
+  Worker& operator=(Worker&&) = delete;
+  Worker& operator=(Worker const&) = delete;
 
   Pool* const pool;
 
