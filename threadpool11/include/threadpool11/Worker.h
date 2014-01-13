@@ -47,12 +47,6 @@ class Worker
   friend class Pool;
 
 public:
-  enum class WorkPrio
-  {
-    DEFERRED = 0,
-    IMMIDIATE
-  };
-
   typedef std::function<void()> WorkType;
 
 private:
@@ -63,17 +57,7 @@ private:
 
   Pool* const pool;
 
-  std::mutex initMutex;
-  std::condition_variable initializer;
-
-  WorkType work;
-  std::list<Worker>::iterator iterator;
-
-  std::mutex activatorMutex;
-  std::condition_variable activator;
-  bool isWorkReallyPosted;  // spurious wakeup protection
-
-  bool isReallyInitialized;
+  WorkType* work;
 
   std::atomic<bool> terminate;
 

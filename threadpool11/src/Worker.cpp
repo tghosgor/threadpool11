@@ -36,8 +36,6 @@ namespace threadpool11
 Worker::Worker(Pool* const& pool) :
   pool(pool),
   work(nullptr),
-  isWorkReallyPosted(false),
-  isReallyInitialized(false),
   terminate(false),
   thread(std::bind(&Worker::execute, this))
 {
@@ -54,55 +52,22 @@ inline bool Worker::operator==(const Worker* other) const
   return operator==(*other);
 }
 
-void Worker::setWork(WorkType work)
-{
-  this->work = std::move(work);
-  std::lock_guard<std::mutex> lock_guard(activatorMutex);
-  isWorkReallyPosted = true;
-  activator.notify_one();
-}
-
 void Worker::execute()
 {
-  {
-    std::unique_lock<std::mutex> initLock(this->initMutex);
-    std::unique_lock<std::mutex> lock(activatorMutex);
-    isReallyInitialized = true;
-    initializer.notify_one();
-    initLock.unlock();
-    activator.wait(lock, [this](){ return isWorkReallyPosted; });
-  }
-
   while(true)
   {
-    std::unique_lock<std::mutex> lock(activatorMutex);
-    isWorkReallyPosted = false;
+    WorkType* work;
+    while(pool->workQueue.pop(work))
+    {
+      (*work)();
+      delete work;
+    }
 
-    WORK:
+    std::unique_lock<std::mutex> workSignalLock(pool->workSignalMutex);
+    pool->workSignal.wait(workSignalLock, [this](){ return pool->isWorkSignalReal; });
+    pool->isWorkSignalReal = false;
     if(terminate)
       break;
-    work();
-    {
-      std::unique_lock<std::mutex> enqueueLock(pool->enqueuedWorkMutex);
-      if(pool->enqueuedWork.size() > 0)
-      {
-        work = std::move(pool->enqueuedWork.front());
-        pool->enqueuedWork.pop_front();
-        goto WORK;
-      }
-
-      {
-        std::lock(pool->activeWorkerContMutex, pool->inactiveWorkerContMutex);
-
-        pool->inactiveWorkers.splice(pool->inactiveWorkers.end(), pool->activeWorkers, iterator);
-
-        pool->activeWorkerContMutex.unlock();
-        pool->inactiveWorkerContMutex.unlock();
-      }
-      enqueueLock.unlock();
-
-      activator.wait(lock, [this](){ return isWorkReallyPosted; });
-    }
   }
 }
 
