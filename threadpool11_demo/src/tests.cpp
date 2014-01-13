@@ -1,4 +1,4 @@
-﻿#include <iostream>
+#include <iostream>
 #include <chrono>
 #include <cstdlib>
 
@@ -18,9 +18,9 @@ int recursiveWork(threadpool11::Pool & pool, int depth ){
 
 int main(int argc, char *argv[]){
     try{
-        int threads = 20;
-        int recursion = 50;
-        int initial_jobs = 10000;
+        int threads = 10;
+        int recursion = 10;
+        int initial_jobs = 1000;
         auto t0 = std::chrono::high_resolution_clock::now();
         #ifdef TEST_2
         threadpool11::Pool pool(threads);

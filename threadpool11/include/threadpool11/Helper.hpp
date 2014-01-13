@@ -23,8 +23,8 @@ struct move_on_copy
  
 private:
    mutable T value;
-   move_on_copy& operator=(move_on_copy&& aValue) = delete; // not needed here
-   move_on_copy& operator=(const move_on_copy& aValue) = delete; // not needed here
+   move_on_copy& operator=(move_on_copy&& aValue); // not needed here
+   move_on_copy& operator=(const move_on_copy& aValue); // not needed here
 };
 
 template<typename T> inline
