@@ -42,32 +42,25 @@ Worker::Worker(Pool* const& pool) :
   //std::cout << std::this_thread::get_id() << " Worker created" << std::endl;
 }
 
-inline bool Worker::operator==(Worker const& other) const
-{
-  return thread.get_id() == other.thread.get_id();
-}
-
-inline bool Worker::operator==(const Worker* other) const
-{
-  return operator==(*other);
-}
-
 void Worker::execute()
 {
-  while(true)
+  while(!terminate)
   {
-    WorkType* work;
-    while(pool->workQueue.pop(work))
+    WorkType* work_;
+    //std::cout << "\tThread " << std::this_thread::get_id() << " awaken." << std::endl;
+    while(pool->workQueue.pop(work_))
     {
+      std::unique_ptr<WorkType> work(work_);
+      --pool->workQueueSize;
+      if(terminate)
+        return;
+      //std::cout << "\tThread " << std::this_thread::get_id() << " worked." << std::endl;
       (*work)();
-      delete work;
     }
 
+    //std::cout << "\tThread " << std::this_thread::get_id() << " will sleep." << std::endl;
     std::unique_lock<std::mutex> workSignalLock(pool->workSignalMutex);
-    pool->workSignal.wait(workSignalLock, [this](){ return pool->isWorkSignalReal; });
-    pool->isWorkSignalReal = false;
-    if(terminate)
-      break;
+    pool->workSignal.wait(workSignalLock, [this](){ return (pool->workQueueSize.load() || terminate); });
   }
 }
 

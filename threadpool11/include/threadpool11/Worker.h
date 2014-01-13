@@ -67,16 +67,11 @@ private:
   std::thread thread;
 
 private:
-  void setWork(WorkType work);
-
   void execute();
 
 public:
   Worker(Pool* const& pool);
   ~Worker() { }
-
-  bool operator==(Worker const& other) const;
-  bool operator==(const Worker* other) const;
 };
 
 }

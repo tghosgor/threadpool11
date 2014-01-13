@@ -65,8 +65,6 @@ class Pool
 friend class Worker;
 
 public:
-  typedef unsigned int WorkerCountType;
-
   enum class WorkPrio
   {
     DEFERRED = 0,
@@ -82,16 +80,16 @@ private:
   std::deque<Worker> workers;
 
   mutable std::mutex workSignalMutex;
-  int isWorkSignalReal;
   std::condition_variable workSignal;
 
   boost::lockfree::queue<Worker::WorkType*> workQueue;
+  std::atomic<size_t> workQueueSize;
 
-  void spawnWorkers(WorkerCountType n);
+  void spawnWorkers(size_t n);
 
 public:
   threadpool11_EXPORT
-  Pool(WorkerCountType const& workerCount = std::thread::hardware_concurrency());
+  Pool(size_t const& workerCount = std::thread::hardware_concurrency());
   ~Pool();
 
   /*!
@@ -119,32 +117,29 @@ public:
   threadpool11_EXPORT
   void joinAll();
 
+  void setWorkerCount(size_t const& n) const
+  {
+
+  }
+
   /*!
-   * This function requires a mutex lock so you should call it
-   * wisely if you performance is a life matter to you.
+   * \brief Pool::getWorkerCount
+   * \return The number of the worker threads.
    */
-  threadpool11_EXPORT
-  WorkerCountType getWorkQueueCount() const;
+  size_t getWorkerCount() const;
 
   /*!
    * This function requires a mutex lock so you should call it
    * wisely if you performance is a life matter to you.
    */
   threadpool11_EXPORT
-  WorkerCountType getActiveWorkerCount() const;
-
-  /*!
-   * This function requires a mutex lock so you should call it
-   * wisely if you performance is a life matter to you.
-   */
-  threadpool11_EXPORT
-  WorkerCountType getInactiveWorkerCount() const;
+  size_t getWorkQueueSize() const;
 
   /*!
    * Increases the number of threads in the pool by n.
    */
   threadpool11_EXPORT
-  void increaseWorkerCountBy(WorkerCountType const& n);
+  void increaseWorkerCountBy(size_t const& n);
 
   /*!
    * Tries to decrease the number of threads in the pool by n.
@@ -154,7 +149,7 @@ public:
    * will do.
    */
   threadpool11_EXPORT
-  WorkerCountType decreaseWorkerCountBy(WorkerCountType n);
+  size_t decreaseWorkerCountBy(size_t n);
 };
 
 template<typename T>
@@ -171,9 +166,9 @@ std::future<T> Pool::postWork(std::function<T()> callable, WorkPrio const type)
   auto move_promise = make_move_on_copy(std::move(promise));
 
   std::unique_lock<std::mutex> workSignalLock(workSignalMutex);
-  isWorkSignalReal = 1;
+  ++workQueueSize;
   workQueue.push(new Worker::WorkType([move_callable, move_promise]() mutable { move_promise.Value().set_value((move_callable.Value())()); }));
-  workSignal.notify_one();
+  workSignal.notify_all();
 
   return future;
 }
@@ -191,9 +186,9 @@ std::future<void> Pool::postWork(std::function<void()> callable, WorkPrio const 
   auto move_promise = make_move_on_copy(std::move(promise));
 
   std::unique_lock<std::mutex> workSignalLock(workSignalMutex);
-  isWorkSignalReal = 1;
+  ++workQueueSize;
   workQueue.push(new Worker::WorkType([move_callable, move_promise]() mutable { (move_callable.Value())(); move_promise.Value().set_value(); }));
-  workSignal.notify_one();
+  workSignal.notify_all();
 
   return future;
 }

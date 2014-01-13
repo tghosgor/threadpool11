@@ -34,8 +34,8 @@ either expressed or implied, of the FreeBSD Project.
 namespace threadpool11
 {
 
-Pool::Pool(WorkerCountType const& workerCount) :
-  isWorkSignalReal(0)
+Pool::Pool(size_t const& workerCount) :
+  workQueueSize(0)
 {
   spawnWorkers(workerCount);
 }
@@ -47,36 +47,40 @@ Pool::~Pool()
 
 void Pool::joinAll()
 {
+  for(auto& it : workers)
+  {
+    it.terminate = true;
+    postWork<void>([]() { });
+  }
+  for(auto& it : workers)
+    if(it.thread.joinable())
+      it.thread.join();
 }
 
-Pool::WorkerCountType Pool::getWorkQueueCount() const
+size_t Pool::getWorkerCount() const
 {
-  return 0;
+  return workers.size();
 }
 
-Pool::WorkerCountType Pool::getActiveWorkerCount() const
+size_t Pool::getWorkQueueSize() const
 {
-  return 0;
+  return workQueueSize.load();
 }
 
-Pool::WorkerCountType Pool::getInactiveWorkerCount() const
-{
-  return 0;
-}
-
-void Pool::increaseWorkerCountBy(WorkerCountType const& n)
+void Pool::increaseWorkerCountBy(size_t const& n)
 {
   spawnWorkers(n);
 }
 
-Pool::WorkerCountType Pool::decreaseWorkerCountBy(WorkerCountType n)
+size_t Pool::decreaseWorkerCountBy(size_t n)
 {
+	return 0;
 }
 
-void Pool::spawnWorkers(WorkerCountType n)
+void Pool::spawnWorkers(size_t n)
 {
   //'OR' makes sure the case where one of the expressions is zero, is valid.
-  assert(static_cast<WorkerCountType>(inactiveWorkers.size() + n) > n || static_cast<WorkerCountType>(inactiveWorkers.size() + n) > inactiveWorkers.size());
+  assert(static_cast<size_t>(inactiveWorkers.size() + n) > n || static_cast<size_t>(inactiveWorkers.size() + n) > inactiveWorkers.size());
   while(n-- > 0)
     workers.emplace_back(this);
 }
