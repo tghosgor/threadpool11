@@ -39,13 +39,7 @@ either expressed or implied, of the FreeBSD Project.
 
 std::mutex coutMutex;
 
-void testFunc(int i) {
-  coutMutex.lock();
-  std::cout << "\tDoing " << i << " by thread id " << std::this_thread::get_id() << std::endl;
-  coutMutex.unlock();
-}
-
-void testFunc2()
+void test1Func()
 {
   coutMutex.lock();
   //heavy job that takes 1 second
@@ -54,14 +48,22 @@ void testFunc2()
   std::this_thread::sleep_for(std::chrono::seconds(1));
 }
 
-void testFunc3()
+void test2Func()
 {
   volatile int i = std::min(5, rand());
 }
 
+std::atomic<uint64_t> test3Var(0);
+void test3Func()
+{
+    //volatile uint32_t var = 0;
+    //while(++var < (std::numeric_limits<uint32_t>::max() / 1000));
+    ++test3Var;
+}
+
 int main()
 {
-  threadpool11::Pool pool(5);
+  threadpool11::Pool pool;
 
   std::cout << "Your machine's hardware concurrency is " << std::thread::hardware_concurrency() << std::endl << std::endl;
 
@@ -75,30 +77,30 @@ int main()
       << "However, in real life cases, work would keep CPU busy so you would not get any real benefit using "
       << "thread numbers that are higher than your machine's hardware concurrency (threads that are executed "
       << "concurrently) except in some cases like doing file IO." << std::endl << std::endl;
-    /*{
+    {
       std::cout << "Demo 1\n";
-      std::cout << "Executing 5 testFunc2() WITHOUT posting to thread pool:\n";
+      std::cout << "Executing 5 test1Func() WITHOUT posting to thread pool:\n";
       auto begin = std::chrono::high_resolution_clock::now();
-      testFunc2();
-      testFunc2();
-      testFunc2();
-      testFunc2();
-      testFunc2();
+      test1Func();
+      test1Func();
+      test1Func();
+      test1Func();
+      test1Func();
       auto end = std::chrono::high_resolution_clock::now();
       std::cout << "\texecution took "
         << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() << " milliseconds.\n\n";
-    }*/
+    }
 
-    pool.increaseWorkerCountBy(5);
+    //pool.increaseWorkerCountBy(5);
     {
-      std::cout << "Executing 5 testFunc2() WITH posting to thread pool:" << std::endl;
+      std::cout << "Executing 5 test1Func() WITH posting to thread pool:" << std::endl;
       std::vector<std::future<void>> futures;
       auto begin = std::chrono::high_resolution_clock::now();
-      futures.emplace_back(pool.postWork<void>(testFunc2));
-      futures.emplace_back(pool.postWork<void>(testFunc2));
-      futures.emplace_back(pool.postWork<void>(testFunc2));
-      futures.emplace_back(pool.postWork<void>(testFunc2));
-      futures.emplace_back(pool.postWork<void>(testFunc2));
+      futures.emplace_back(pool.postWork<void>(test1Func));
+      futures.emplace_back(pool.postWork<void>(test1Func));
+      futures.emplace_back(pool.postWork<void>(test1Func));
+      futures.emplace_back(pool.postWork<void>(test1Func));
+      futures.emplace_back(pool.postWork<void>(test1Func));
       for(auto& it : futures)
         it.get();
       auto end = std::chrono::high_resolution_clock::now();
@@ -113,14 +115,14 @@ int main()
   */
   {
     std::cout << "Demo 2" << std::endl;
-    pool.decreaseWorkerCountBy(pool.getInactiveWorkerCount() - std::thread::hardware_concurrency());
+    pool.decreaseWorkerCountBy(pool.getWorkerCount() - std::thread::hardware_concurrency());
     std::cout << "Posting 1.000.000 jobs." << std::endl;
 
     std::vector<std::future<void>> futures;
     auto begin = std::chrono::high_resolution_clock::now();
     for(int i = 0; i < 1000000; ++i)
     {
-      futures.emplace_back(pool.postWork<void>(testFunc3));
+      futures.emplace_back(pool.postWork<void>(test2Func));
     }
     auto end = std::chrono::high_resolution_clock::now();
     for(auto& it : futures)
@@ -133,23 +135,30 @@ int main()
               << std::endl << std::endl;
   }
 
-  std::cout << "Current worker count is " << pool.getActiveWorkerCount() + pool.getInactiveWorkerCount()
-            << " (Active: " << pool.getActiveWorkerCount() << ", Inactive: " << pool.getInactiveWorkerCount()
-            << ") . Setting worker count to 5 again... " << std::flush;
-  pool.increaseWorkerCountBy(std::min<threadpool11::Pool::WorkerCountType>(5, 5 - pool.getInactiveWorkerCount()));
-  std::cout << "The new worker count is " << pool.getInactiveWorkerCount() << "." << std::endl << std::endl;
+  std::cout << "Current worker count is " << pool.getWorkerCount()
+            << ". Setting worker count to 5 again... " << std::flush;
+  pool.setWorkerCount(std::thread::hardware_concurrency());
+  std::cout << "The new worker count is " << pool.getWorkerCount() << "." << std::endl << std::endl;
 
   /**
   * Demo #3
-  * You should always capture by value or use appropriate mutexes for reference access.
   */
   {
     std::cout << "Demo 3" << std::endl;
-    std::cout << "Testing lambda copy/modify:" << std::endl;
-    for (int i=0; i<20; i++) {
-      pool.postWork<void>([=]() { testFunc(i); });
-    }
-    std::cout << "Done." << std::endl << std::endl;
+    std::cout << "Testing work queue flow." << std::endl;
+    size_t constexpr iterations = 25000;
+    pool.increaseWorkerCountBy(iterations - 2);
+    std::array<std::future<void>, iterations> futures;
+    auto begin = std::chrono::high_resolution_clock::now();
+    for (int i=0; i < iterations; ++i)
+      futures[i] = pool.postWork<void>([=]() { test3Func(); });
+    for (int i=0; i < iterations; ++i)
+      futures[i].get();
+    auto end = std::chrono::high_resolution_clock::now();
+    std::cout << "Variable is: " << test3Var << ", expected: " << iterations << std::endl;
+    std::cout << "Demo 3 took "
+              << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count()
+              << " milliseconds." << std::endl << std::endl;
   }
 
   /**
@@ -239,8 +248,10 @@ int main()
 
   std::cout << std::endl << std::endl;
 
+  std::cout << "Demos completed." << std::endl;
+
   pool.joinAll();
 
-  getchar();
+  //std::cin.get();
   return 0;
-};
+}

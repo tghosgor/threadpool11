@@ -18,9 +18,9 @@ int recursiveWork(threadpool11::Pool & pool, int depth ){
 
 int main(int argc, char *argv[]){
     try{
-        int threads = 10;
-        int recursion = 10;
-        int initial_jobs = 1000;
+        int threads = 2;
+        int recursion = 100;
+        int initial_jobs = 10000;
         auto t0 = std::chrono::high_resolution_clock::now();
         #ifdef TEST_2
         threadpool11::Pool pool(threads);
@@ -29,7 +29,7 @@ int main(int argc, char *argv[]){
         {
             #ifdef TEST_0
             threadpool11::Pool pool(threads);
-            recursiveWork(pool, recursion);
+            //recursiveWork(pool, recursion);
             #elif defined (TEST_1)
             threadpool11::Pool pool(threads);
             recursiveWork(pool, recursion);
