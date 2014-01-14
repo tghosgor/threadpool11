@@ -155,16 +155,16 @@ int main()
   {
     std::cout << "Demo 3" << std::endl;
     std::cout << "Testing work queue flow." << std::endl;
-    size_t constexpr iterations = 30000;
-    pool.increaseWorkerCountBy(iterations - 2);
-  std::array<std::future<void>, iterations> futures;
+#define th11_demo_iterations 30000
+	pool.increaseWorkerCountBy(th11_demo_iterations - 2);
+	std::array<std::future<void>, th11_demo_iterations> futures;
     auto begin = std::chrono::high_resolution_clock::now();
-    for (int i=0; i < iterations; ++i)
+	for (int i = 0; i < th11_demo_iterations; ++i)
       futures[i] = pool.postWork<void>([=]() { test3Func(); });
-    for (int i=0; i < iterations; ++i)
+	for (int i = 0; i < th11_demo_iterations; ++i)
       futures[i].get();
     auto end = std::chrono::high_resolution_clock::now();
-    std::cout << "Variable is: " << test3Var << ", expected: " << iterations << std::endl;
+	std::cout << "Variable is: " << test3Var << ", expected: " << th11_demo_iterations << std::endl;
     std::cout << "Demo 3 took "
               << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count()
               << " milliseconds." << std::endl << std::endl;
