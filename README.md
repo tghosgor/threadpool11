@@ -15,3 +15,6 @@ I will be glad to hear about the suggestions/ideas you have about the project, v
 All non '_-dev_' branches should be safe to use but prefer the latest version.
 
 ###For more information, head on to the [wiki](https://github.com/tghosgor/threadpool11/wiki/). There is also a demo application in repository.
+
+##Dependencies
+Only _boost::lockfree_, which is a header-only library, is needed to build _threadpool11_.
