@@ -56,8 +56,8 @@ void test2Func()
 std::atomic<uint64_t> test3Var(0);
 void test3Func()
 {
-    //volatile uint32_t var = 0;
-    //while(++var < (std::numeric_limits<uint32_t>::max() / 1000));
+    volatile uint16_t var = 0;
+    while(++var < (std::numeric_limits<uint16_t>::max()));
     ++test3Var;
 }
 
@@ -146,9 +146,9 @@ int main()
   {
     std::cout << "Demo 3" << std::endl;
     std::cout << "Testing work queue flow." << std::endl;
-    size_t constexpr iterations = 25000;
+    size_t constexpr iterations = 30000;
     pool.increaseWorkerCountBy(iterations - 2);
-    std::array<std::future<void>, iterations> futures;
+  std::array<std::future<void>, iterations> futures;
     auto begin = std::chrono::high_resolution_clock::now();
     for (int i=0; i < iterations; ++i)
       futures[i] = pool.postWork<void>([=]() { test3Func(); });
