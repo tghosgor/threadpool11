@@ -123,6 +123,15 @@ public:
   WorkerCountType getWorkQueueCount() const;
 
   /*!
+   * Gives the total number of worker threads.
+   */
+  threadpool11_EXPORT
+  WorkerCountType getWorkerCount() const
+  {
+    return getInactiveWorkerCount() + getActiveWorkerCount();
+  }
+
+  /*!
    * This function requires a mutex lock so you should call it
    * wisely if you performance is a life matter to you.
    */
