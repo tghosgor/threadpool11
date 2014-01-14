@@ -42,13 +42,12 @@ either expressed or implied, of the FreeBSD Project.
 #include <memory>
 #include <mutex>
 
+#include <boost/lockfree/queue.hpp>
+
 #include "threadpool11/Worker.h"
 #include "threadpool11/Helper.hpp"
 
-/*! NO DLLS ANYMORE */
-#define threadpool11_EXPORT
-
-/*#ifdef WIN32
+#if defined(WIN32) && defined(threadpool11_DLL)
   #ifdef threadpool11_EXPORTING
     #define threadpool11_EXPORT __declspec(dllexport)
   #else
@@ -56,7 +55,7 @@ either expressed or implied, of the FreeBSD Project.
   #endif
 #else
   #define threadpool11_EXPORT
-#endif*/
+#endif
 
 namespace threadpool11
 {
@@ -66,7 +65,11 @@ class Pool
 friend class Worker;
 
 public:
-  typedef unsigned int WorkerCountType;
+  enum class WorkPrio
+  {
+    DEFERRED = 0,
+    IMMIDIATE
+  };
 
 private:
   Pool(Pool&&);
@@ -74,20 +77,19 @@ private:
   Pool& operator=(Pool&&);
   Pool& operator=(Pool const&);
 
-  std::list<Worker> activeWorkers;
-  mutable std::mutex activeWorkerContMutex;
+  std::deque<Worker> workers;
 
-  std::list<Worker> inactiveWorkers;
-  mutable std::mutex inactiveWorkerContMutex;
+  mutable std::mutex workSignalMutex;
+  std::condition_variable workSignal;
 
-  mutable std::mutex enqueuedWorkMutex;
-  std::deque<decltype(Worker::work)> enqueuedWork;
+  boost::lockfree::queue<Worker::WorkType*> workQueue;
+  std::atomic<size_t> workQueueSize;
 
-  void spawnWorkers(WorkerCountType n);
+  void spawnWorkers(size_t n);
 
 public:
   threadpool11_EXPORT
-  Pool(WorkerCountType const& workerCount = std::thread::hardware_concurrency());
+  Pool(size_t const& workerCount = std::thread::hardware_concurrency());
   ~Pool();
 
   /*!
@@ -99,7 +101,7 @@ public:
    */
   template<typename T>
   threadpool11_EXPORT
-  std::future<T> postWork(std::function<T()> callable, Worker::WorkPrio const type = Worker::WorkPrio::DEFERRED);
+  std::future<T> postWork(std::function<T()> callable, WorkPrio const type = WorkPrio::DEFERRED);
 
   /*!
    * This function joins all the threads in the thread pool as fast as possible.
@@ -116,19 +118,20 @@ public:
   void joinAll();
 
   /*!
-   * This function requires a mutex lock so you should call it
-   * wisely if you performance is a life matter to you.
+   * \brief Pool::getWorkerCount
+   * not thread-safe.
+   * \return The number of worker threads.
    */
-  threadpool11_EXPORT
-  WorkerCountType getWorkQueueCount() const;
+  size_t getWorkerCount() const;
 
   /*!
-   * Gives the total number of worker threads.
+   * \brief setWorkerCount
+   * \param n
+   * Sets the number of workers to 'n'
    */
-  threadpool11_EXPORT
-  WorkerCountType getWorkerCount() const
+  void setWorkerCount(size_t const& n) const
   {
-    return getInactiveWorkerCount() + getActiveWorkerCount();
+
   }
 
   /*!
@@ -136,20 +139,13 @@ public:
    * wisely if you performance is a life matter to you.
    */
   threadpool11_EXPORT
-  WorkerCountType getActiveWorkerCount() const;
-
-  /*!
-   * This function requires a mutex lock so you should call it
-   * wisely if you performance is a life matter to you.
-   */
-  threadpool11_EXPORT
-  WorkerCountType getInactiveWorkerCount() const;
+  size_t getWorkQueueSize() const;
 
   /*!
    * Increases the number of threads in the pool by n.
    */
   threadpool11_EXPORT
-  void increaseWorkerCountBy(WorkerCountType const& n);
+  void increaseWorkerCountBy(size_t const& n);
 
   /*!
    * Tries to decrease the number of threads in the pool by n.
@@ -159,12 +155,12 @@ public:
    * will do.
    */
   threadpool11_EXPORT
-  WorkerCountType decreaseWorkerCountBy(WorkerCountType n);
+  size_t decreaseWorkerCountBy(size_t n);
 };
 
 template<typename T>
 threadpool11_EXPORT inline
-std::future<T> Pool::postWork(std::function<T()> callable, Worker::WorkPrio const type)
+std::future<T> Pool::postWork(std::function<T()> callable, WorkPrio const type)
 {
   std::promise<T> promise;
   auto future = promise.get_future();
@@ -175,27 +171,17 @@ std::future<T> Pool::postWork(std::function<T()> callable, Worker::WorkPrio cons
   /* evil move hack */
   auto move_promise = make_move_on_copy(std::move(promise));
 
-  std::lock_guard<std::mutex> enqueueLock(enqueuedWorkMutex);
-  std::lock_guard<std::mutex> inactiveWorkersLock(inactiveWorkerContMutex);
+  std::unique_lock<std::mutex> workSignalLock(workSignalMutex);
+  ++workQueueSize;
+  workQueue.push(new Worker::WorkType([move_callable, move_promise]() mutable { move_promise.Value().set_value((move_callable.Value())()); }));
+  workSignal.notify_all();
 
-  if(inactiveWorkers.size() > 0)
-  {
-    std::lock_guard<std::mutex> activeWorkersLock(activeWorkerContMutex);
-    activeWorkers.splice(activeWorkers.end(), inactiveWorkers, --inactiveWorkers.end(), inactiveWorkers.end());
-    /* iterators are also moved to activeWorkers and are valid according to the C++11 standard */
-    //auto workerIterator = --activeWorkers.end();
-    //workerIterator->iterator = workerIterator;
-    activeWorkers.back().setWork([move_callable, move_promise]() mutable { move_promise.Value().set_value((move_callable.Value())()); });
-    return future;
-  }
-
-  enqueuedWork.emplace_back([move_callable, move_promise]() mutable { move_promise.Value().set_value((move_callable.Value())()); });
   return future;
 }
 
 template<>
 threadpool11_EXPORT inline
-std::future<void> Pool::postWork(std::function<void()> callable, Worker::WorkPrio const type)
+std::future<void> Pool::postWork(std::function<void()> callable, WorkPrio const type)
 {
   std::promise<void> promise;
   auto future = promise.get_future();
@@ -205,18 +191,11 @@ std::future<void> Pool::postWork(std::function<void()> callable, Worker::WorkPri
   /* evil move hack */
   auto move_promise = make_move_on_copy(std::move(promise));
 
-  std::lock_guard<std::mutex> enqueueLock(enqueuedWorkMutex);
-  std::lock_guard<std::mutex> inactiveWorkersLock(inactiveWorkerContMutex);
+  std::unique_lock<std::mutex> workSignalLock(workSignalMutex);
+  ++workQueueSize;
+  workQueue.push(new Worker::WorkType([move_callable, move_promise]() mutable { (move_callable.Value())(); move_promise.Value().set_value(); }));
+  workSignal.notify_all();
 
-  if(inactiveWorkers.size() > 0)
-  {
-    std::lock_guard<std::mutex> activeWorkersLock(activeWorkerContMutex);
-    activeWorkers.splice(activeWorkers.end(), inactiveWorkers, --inactiveWorkers.end(), inactiveWorkers.end());
-    activeWorkers.back().setWork([move_callable, move_promise]() mutable { (move_callable.Value())(); move_promise.Value().set_value(); });
-    return future;
-  }
-
-  enqueuedWork.emplace_back([move_callable, move_promise]() mutable { (move_callable.Value())(); move_promise.Value().set_value(); });
   return future;
 }
 

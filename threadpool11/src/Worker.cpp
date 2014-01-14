@@ -36,73 +36,31 @@ namespace threadpool11
 Worker::Worker(Pool* const& pool) :
   pool(pool),
   work(nullptr),
-  isWorkReallyPosted(false),
-  isReallyInitialized(false),
   terminate(false),
   thread(std::bind(&Worker::execute, this))
 {
   //std::cout << std::this_thread::get_id() << " Worker created" << std::endl;
 }
 
-inline bool Worker::operator==(Worker const& other) const
-{
-  return thread.get_id() == other.thread.get_id();
-}
-
-inline bool Worker::operator==(const Worker* other) const
-{
-  return operator==(*other);
-}
-
-void Worker::setWork(WorkType work)
-{
-  this->work = std::move(work);
-  std::lock_guard<std::mutex> lock_guard(activatorMutex);
-  isWorkReallyPosted = true;
-  activator.notify_one();
-}
-
 void Worker::execute()
 {
+  while(!terminate)
   {
-    std::unique_lock<std::mutex> initLock(this->initMutex);
-    std::unique_lock<std::mutex> lock(activatorMutex);
-    isReallyInitialized = true;
-    initializer.notify_one();
-    initLock.unlock();
-    activator.wait(lock, [this](){ return isWorkReallyPosted; });
-  }
-
-  while(true)
-  {
-    std::unique_lock<std::mutex> lock(activatorMutex);
-    isWorkReallyPosted = false;
-
-    WORK:
-    if(terminate)
-      break;
-    work();
+    WorkType* work_;
+    //std::cout << "\tThread " << std::this_thread::get_id() << " awaken." << std::endl;
+    while(pool->workQueue.pop(work_))
     {
-      std::unique_lock<std::mutex> enqueueLock(pool->enqueuedWorkMutex);
-      if(pool->enqueuedWork.size() > 0)
-      {
-        work = std::move(pool->enqueuedWork.front());
-        pool->enqueuedWork.pop_front();
-        goto WORK;
-      }
-
-      {
-        std::lock(pool->activeWorkerContMutex, pool->inactiveWorkerContMutex);
-
-        pool->inactiveWorkers.splice(pool->inactiveWorkers.end(), pool->activeWorkers, iterator);
-
-        pool->activeWorkerContMutex.unlock();
-        pool->inactiveWorkerContMutex.unlock();
-      }
-      enqueueLock.unlock();
-
-      activator.wait(lock, [this](){ return isWorkReallyPosted; });
+      std::unique_ptr<WorkType> work(work_);
+      --pool->workQueueSize;
+      if(terminate)
+        return;
+      //std::cout << "\tThread " << std::this_thread::get_id() << " worked." << std::endl;
+      (*work)();
     }
+
+    //std::cout << "\tThread " << std::this_thread::get_id() << " will sleep." << std::endl;
+    std::unique_lock<std::mutex> workSignalLock(pool->workSignalMutex);
+    pool->workSignal.wait(workSignalLock, [this](){ return (pool->workQueueSize.load() || terminate); });
   }
 }
 

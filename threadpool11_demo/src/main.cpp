@@ -142,6 +142,7 @@ int main()
 
   /**
   * Demo #3
+  * You should always capture by value or use appropriate mutexes for reference access.
   */
   {
     std::cout << "Demo 3" << std::endl;

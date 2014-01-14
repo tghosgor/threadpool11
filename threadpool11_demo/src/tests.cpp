@@ -29,7 +29,7 @@ int main(int argc, char *argv[]){
         {
             #ifdef TEST_0
             threadpool11::Pool pool(threads);
-            recursiveWork(pool, recursion);
+            //recursiveWork(pool, recursion);
             #elif defined (TEST_1)
             threadpool11::Pool pool(threads);
             recursiveWork(pool, recursion);

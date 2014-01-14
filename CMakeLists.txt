@@ -8,7 +8,11 @@ if(NOT CMAKE_BUILD_TYPE)
   # SET the possible values of build type for cmake-gui
 endif()
 
-SET_PROPERTY(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Release" "Debug" "Perf")
+find_package(Boost REQUIRED)
+
+include_directories(${Boost_INCLUDE_DIR})
+
+set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Release" "Debug" "Perf")
 
 if(CMAKE_CXX_COMPILER_ID MATCHES GNU OR
     CMAKE_CXX_COMPILER_ID MATCHES Clang)
@@ -21,11 +25,11 @@ elseif(MSVC)
   set(CMAKE_STATIC_LINKER_FLAGS "${CMAKE_STATIC_LINKER_FLAGS} /LTCG")
 endif()
 
-SET(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/build/lib)
-SET(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/build/lib)
-SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/build/bin)
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/build/lib)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/build/lib)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/build/bin)
 
-ADD_SUBDIRECTORY(threadpool11)
-ADD_SUBDIRECTORY(threadpool11_demo)
+add_subdirectory(threadpool11)
+add_subdirectory(threadpool11_demo)
 
-FILE(COPY ./threadpool11/include DESTINATION ${CMAKE_BINARY_DIR}/build)
+file(COPY ./threadpool11/include DESTINATION ${CMAKE_BINARY_DIR}/build)
