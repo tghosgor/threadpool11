@@ -65,11 +65,6 @@ class Pool
 friend class Worker;
 
 public:
-  enum class WorkPrio
-  {
-    DEFERRED = 0,
-    IMMIDIATE
-  };
 
 private:
   Pool(Pool&&);
@@ -82,7 +77,7 @@ private:
   mutable std::mutex workSignalMutex;
   std::condition_variable workSignal;
 
-  boost::lockfree::queue<Worker::WorkType*> workQueue;
+  boost::lockfree::queue<Work::Callable*> workQueue;
   std::atomic<size_t> workQueueSize;
 
   void spawnWorkers(size_t n);
@@ -101,12 +96,12 @@ public:
    */
   template<typename T>
   threadpool11_EXPORT
-  std::future<T> postWork(std::function<T()> callable, WorkPrio const type = WorkPrio::DEFERRED);
+  std::future<T> postWork(std::function<T()> callable, Work::Type const type = Work::Type::STD, Work::Prio const priority = Work::Prio::DEFERRED);
 
   /*!
    * This function joins all the threads in the thread pool as fast as possible.
    * All the posted works are NOT GUARANTEED to be finished before the worker threads
-   * are destroyed and this function returns. Enqueued works stay as they are.
+   * are destroyed and this function returns.
    *
    * However, ongoing works in the threads in the pool are guaranteed
    * to finish before that threads are terminated.
@@ -129,10 +124,7 @@ public:
    * \param n
    * Sets the number of workers to 'n'
    */
-  void setWorkerCount(size_t const& n) const
-  {
-
-  }
+  void setWorkerCount(size_t const& n);
 
   /*!
    * This function requires a mutex lock so you should call it
@@ -149,18 +141,20 @@ public:
 
   /*!
    * Tries to decrease the number of threads in the pool by n.
-   * Setting n higher than the number of inactive workers has effect.
-   * If there are no active threads and you want to destroy all the threads
-   * Pool::decreaseWorkerCountBy(std::numeric_limits<Pool::WorkerCountType>::max());
-   * will do.
+   * Setting 'n' higher than the number of workers has no effect.
+   *
+   * WARNING: This function is async. It will return before the threads are joined. It will just post
+   * 'n' requests for termination. This means that if you call this function multiple times before
+   * those requests are served, worker termination requests will pile up. It can even kill the newly
+   * created workers if all workers are removed before all requests are processed.
    */
   threadpool11_EXPORT
-  size_t decreaseWorkerCountBy(size_t n);
+  void decreaseWorkerCountBy(size_t n = std::numeric_limits<size_t>::max());
 };
 
 template<typename T>
 threadpool11_EXPORT inline
-std::future<T> Pool::postWork(std::function<T()> callable, WorkPrio const type)
+std::future<T> Pool::postWork(std::function<T()> callable, Work::Type const type, Work::Prio const prio)
 {
   std::promise<T> promise;
   auto future = promise.get_future();
@@ -173,15 +167,15 @@ std::future<T> Pool::postWork(std::function<T()> callable, WorkPrio const type)
 
   std::unique_lock<std::mutex> workSignalLock(workSignalMutex);
   ++workQueueSize;
-  workQueue.push(new Worker::WorkType([move_callable, move_promise]() mutable { move_promise.Value().set_value((move_callable.Value())()); }));
-  workSignal.notify_all();
+  workQueue.push(new Work::Callable([move_callable, move_promise, type]() mutable { move_promise.Value().set_value((move_callable.Value())()); return type; }));
+  workSignal.notify_one();
 
   return future;
 }
 
 template<>
 threadpool11_EXPORT inline
-std::future<void> Pool::postWork(std::function<void()> callable, WorkPrio const type)
+std::future<void> Pool::postWork(std::function<void()> callable, Work::Type const type, Work::Prio const prio)
 {
   std::promise<void> promise;
   auto future = promise.get_future();
@@ -193,8 +187,8 @@ std::future<void> Pool::postWork(std::function<void()> callable, WorkPrio const 
 
   std::unique_lock<std::mutex> workSignalLock(workSignalMutex);
   ++workQueueSize;
-  workQueue.push(new Worker::WorkType([move_callable, move_promise]() mutable { (move_callable.Value())(); move_promise.Value().set_value(); }));
-  workSignal.notify_all();
+  workQueue.push(new Work::Callable([move_callable, move_promise, type]() mutable { (move_callable.Value())(); move_promise.Value().set_value(); return type; }));
+  workSignal.notify_one();
 
   return future;
 }

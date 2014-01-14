@@ -36,7 +36,6 @@ namespace threadpool11
 Worker::Worker(Pool* const& pool) :
   pool(pool),
   work(nullptr),
-  terminate(false),
   thread(std::bind(&Worker::execute, this))
 {
   //std::cout << std::this_thread::get_id() << " Worker created" << std::endl;
@@ -44,23 +43,22 @@ Worker::Worker(Pool* const& pool) :
 
 void Worker::execute()
 {
-  while(!terminate)
+  while(true)
   {
-    WorkType* work_;
+    Work::Callable* work_;
     //std::cout << "\tThread " << std::this_thread::get_id() << " awaken." << std::endl;
     while(pool->workQueue.pop(work_))
     {
-      std::unique_ptr<WorkType> work(work_);
+      std::unique_ptr<Work::Callable> work(work_);
       --pool->workQueueSize;
-      if(terminate)
-        return;
       //std::cout << "\tThread " << std::this_thread::get_id() << " worked." << std::endl;
-      (*work)();
+      if((*work)() == Work::Type::TERMINAL)
+        return;
     }
 
     //std::cout << "\tThread " << std::this_thread::get_id() << " will sleep." << std::endl;
     std::unique_lock<std::mutex> workSignalLock(pool->workSignalMutex);
-    pool->workSignal.wait(workSignalLock, [this](){ return (pool->workQueueSize.load() || terminate); });
+    pool->workSignal.wait(workSignalLock, [this](){ return (pool->workQueueSize.load()); });
   }
 }
 

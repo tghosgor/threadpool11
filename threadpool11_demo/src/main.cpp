@@ -91,7 +91,6 @@ int main()
         << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() << " milliseconds.\n\n";
     }
 
-    //pool.increaseWorkerCountBy(5);
     {
       std::cout << "Executing 5 test1Func() WITH posting to thread pool:" << std::endl;
       std::vector<std::future<void>> futures;
@@ -110,12 +109,26 @@ int main()
     }
   }
 
+  /*!
+    Helper function tests
+  */
+  {
+    std::cout << "Increasing worker count by 5." << std::endl;
+    pool.increaseWorkerCountBy(5);
+    std::cout << "Current worker count is " << pool.getWorkerCount()
+              << ". Setting worker count to " << std::thread::hardware_concurrency() << "... " << std::flush;
+    pool.setWorkerCount(std::thread::hardware_concurrency());
+    std::cout << "The new worker count is (may be still) " << pool.getWorkerCount() << "." << std::endl;
+    std::cout << "Waiting 1 second..." << std::endl;
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+    std::cout << "The new worker count is " << pool.getWorkerCount() << "." << std::endl << std::endl;
+  }
+
   /**
   * Demo #2
   */
   {
     std::cout << "Demo 2" << std::endl;
-    pool.decreaseWorkerCountBy(pool.getWorkerCount() - std::thread::hardware_concurrency());
     std::cout << "Posting 1.000.000 jobs." << std::endl;
 
     std::vector<std::future<void>> futures;
@@ -134,11 +147,6 @@ int main()
               << " ms, getting: " << std::chrono::duration_cast<std::chrono::milliseconds>(end2 - end).count() << " ms)"
               << std::endl << std::endl;
   }
-
-  std::cout << "Current worker count is " << pool.getWorkerCount()
-            << ". Setting worker count to 5 again... " << std::flush;
-  //pool.setWorkerCount(std::thread::hardware_concurrency());
-  std::cout << "The new worker count is " << pool.getWorkerCount() << "." << std::endl << std::endl;
 
   /**
   * Demo #3

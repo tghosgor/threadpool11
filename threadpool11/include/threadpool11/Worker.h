@@ -37,6 +37,8 @@ either expressed or implied, of the FreeBSD Project.
 #include <mutex>
 #include <thread>
 
+#include "threadpool11/Helper.hpp"
+
 namespace threadpool11
 {
 
@@ -47,7 +49,6 @@ class Worker
   friend class Pool;
 
 public:
-  typedef std::function<void()> WorkType;
 
 private:
   Worker(Worker&&) = delete;
@@ -57,9 +58,7 @@ private:
 
   Pool* const pool;
 
-  WorkType* work;
-
-  std::atomic<bool> terminate;
+  Work::Callable* work;
 
   /*!
   * This should always stay at bottom so that it is called at the most end.

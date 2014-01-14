@@ -47,10 +47,9 @@ Pool::~Pool()
 
 void Pool::joinAll()
 {
-  for(auto& it : workers)
+  for(size_t i = 0; i < workers.size(); ++i)
   {
-    it.terminate = true;
-    postWork<void>([]() { });
+    postWork<void>([]() { }, Work::Type::TERMINAL);
   }
   for(auto& it : workers)
     if(it.thread.joinable())
@@ -60,6 +59,14 @@ void Pool::joinAll()
 size_t Pool::getWorkerCount() const
 {
   return workers.size();
+}
+
+void Pool::setWorkerCount(size_t const& n)
+{
+  if(getWorkerCount() < n)
+    increaseWorkerCountBy(n - getWorkerCount());
+  else
+    decreaseWorkerCountBy(getWorkerCount() - n);
 }
 
 size_t Pool::getWorkQueueSize() const
@@ -72,9 +79,11 @@ void Pool::increaseWorkerCountBy(size_t const& n)
   spawnWorkers(n);
 }
 
-size_t Pool::decreaseWorkerCountBy(size_t n)
+void Pool::decreaseWorkerCountBy(size_t n)
 {
-	return 0;
+  n = std::min(n, getWorkerCount());
+  while(n-- > 0)
+    postWork<void>([]() { }, Work::Type::TERMINAL);
 }
 
 void Pool::spawnWorkers(size_t n)

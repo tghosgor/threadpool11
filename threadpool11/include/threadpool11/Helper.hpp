@@ -5,6 +5,23 @@
 namespace threadpool11
 {
 
+namespace Work
+{
+  enum class Type
+  {
+    STD,
+    TERMINAL
+  };
+
+  enum class Prio
+  {
+    DEFERRED,
+    IMMIDIATE
+  };
+
+  typedef std::function<Work::Type()> Callable;
+}
+
 template<typename T>
 struct move_on_copy
 {
