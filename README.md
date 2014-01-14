@@ -2,7 +2,7 @@
 threadpool11
 ==========
 
-### Cross-platform thread pool implementation using C++11 features.
+### A fast, cross-platform thread pool implementation using C++11 features.
 
 You can find the *VERY EASY* API documentation on header annotations.
 
