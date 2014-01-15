@@ -8,7 +8,9 @@ if(NOT CMAKE_BUILD_TYPE)
   # SET the possible values of build type for cmake-gui
 endif()
 
-if(Boost_FOUND OR BOOST_ROOT)
+find_package(Boost)
+
+if(Boost_FOUND)
   include_directories(${Boost_INCLUDE_DIR})
 else()
   include_directories("ext/include")
