@@ -15,3 +15,7 @@ I will be glad to hear about the suggestions/ideas you have about the project, v
 All non '_-dev_' branches are safe to use but prefer the latest version.
 
 ###For more information, head on to the [wiki](https://github.com/tghosgor/threadpool11/wiki/). There is also a demo application in repository.
+
+##Dependencies
+###boost::lockfree
+You don't need to have anything external but the project uses boost::lockfree. If you have Boost and CMake var Boost\_FOUND is true it will use your boost. If not. there is one in the repo and it will be used.
