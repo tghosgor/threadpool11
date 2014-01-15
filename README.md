@@ -4,7 +4,7 @@ threadpool11
 
 ### A fast, lock-free, cross-platform thread pool implementation using C++11 features.
 
-You can find the *dead simple* API documentation on header comments.
+You can find the **dead simple API** documentation on header comments.
 
 This project was initially developed in just a few hours of free time as I could not find a simple lightweight thread pooling library for my needs.
 
