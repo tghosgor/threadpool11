@@ -18,4 +18,4 @@ All non '_-dev_' branches are safe to use but prefer the latest version.
 
 ##Dependencies
 ###boost::lockfree
-You don't need to have anything external but the project uses boost::lockfree. If you have Boost and CMake var Boost\_FOUND is true it will use your boost. If not. there is one in the repo and it will be used.
+You don't need to have anything external but the project uses boost::lockfree. If you have Boost and CMake var Boost\_FOUND is _true_ it will use your boost. If not. there is one in the repo and it will be used.
