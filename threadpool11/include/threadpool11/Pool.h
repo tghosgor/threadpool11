@@ -117,6 +117,7 @@ public:
    * not thread-safe.
    * \return The number of worker threads.
    */
+  threadpool11_EXPORT
   size_t getWorkerCount() const;
 
   /*!
@@ -124,6 +125,7 @@ public:
    * \param n
    * Sets the number of workers to 'n'
    */
+  threadpool11_EXPORT
   void setWorkerCount(size_t const& n);
 
   /*!
