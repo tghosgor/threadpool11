@@ -156,7 +156,7 @@ int main()
     std::cout << "Demo 3" << std::endl;
     std::cout << "Testing work queue flow." << std::endl;
 #define th11_demo_iterations 30000
-	pool.increaseWorkerCountBy(th11_demo_iterations - 2);
+	//pool.increaseWorkerCountBy(th11_demo_iterations - 2);
 	std::array<std::future<void>, th11_demo_iterations> futures;
     auto begin = std::chrono::high_resolution_clock::now();
 	for (int i = 0; i < th11_demo_iterations; ++i)
