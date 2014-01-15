@@ -155,8 +155,8 @@ public:
 };
 
 template<typename T>
-threadpool11_EXPORT inline
-std::future<T> Pool::postWork(std::function<T()> callable, Work::Type const type, Work::Prio const prio)
+threadpool11_EXPORT
+inline std::future<T> Pool::postWork(std::function<T()> callable, Work::Type const type, Work::Prio const prio)
 {
   std::promise<T> promise;
   auto future = promise.get_future();
@@ -176,8 +176,8 @@ std::future<T> Pool::postWork(std::function<T()> callable, Work::Type const type
 }
 
 template<>
-threadpool11_EXPORT inline
-std::future<void> Pool::postWork(std::function<void()> callable, Work::Type const type, Work::Prio const prio)
+threadpool11_EXPORT
+inline std::future<void> Pool::postWork(std::function<void()> callable, Work::Type const type, Work::Prio const prio)
 {
   std::promise<void> promise;
   auto future = promise.get_future();
