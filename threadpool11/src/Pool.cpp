@@ -26,7 +26,7 @@ namespace threadpool11
 {
 
 Pool::Pool(size_t const& workerCount) :
-  workQueueSize(0)
+  work_queue_size(0)
 {
   spawnWorkers(workerCount);
 }
@@ -49,7 +49,7 @@ void Pool::joinAll()
 
 size_t Pool::getWorkerCount() const
 {
-  return workers.size();
+  return worker_count;
 }
 
 void Pool::setWorkerCount(size_t const& n)
@@ -62,7 +62,7 @@ void Pool::setWorkerCount(size_t const& n)
 
 size_t Pool::getWorkQueueSize() const
 {
-  return workQueueSize.load();
+  return work_queue_size.load();
 }
 
 void Pool::increaseWorkerCountBy(size_t const& n)

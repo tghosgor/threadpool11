@@ -80,7 +80,6 @@ public:
    * to finish before that threads are terminated.
    *
    * Properties: NOT thread-safe.
-   *
    */
   threadpool11_EXPORT
   void joinAll();
@@ -102,8 +101,8 @@ public:
   void setWorkerCount(size_t const& n);
 
   /*!
-   * This function requires a mutex lock so you should call it
-   * wisely if you performance is a life matter to you.
+   * \brief getWorkQueueSize
+   * \return The number of work items that has not been acquired by workers.
    */
   threadpool11_EXPORT
   size_t getWorkQueueSize() const;
@@ -119,8 +118,8 @@ public:
    * Setting 'n' higher than the number of workers has no effect.
    *
    * WARNING: This function is async. It will return before the threads are joined. It will just post
-   * 'n' requests for termination. This means that if you call this function multiple times before
-   * those requests are served, worker termination requests will pile up. It can even kill the newly
+   * 'n' requests for termination. This means that if you call this function multiple times,
+   * worker termination requests will pile up. It can even kill the newly
    * created workers if all workers are removed before all requests are processed.
    */
   threadpool11_EXPORT
@@ -134,11 +133,11 @@ private:
 
   std::deque<Worker> workers;
 
-  mutable std::mutex workSignalMutex;
-  std::condition_variable workSignal;
+  mutable std::mutex work_signal_mutex;
+  std::condition_variable work_signal;
 
-  boost::lockfree::queue<Work::Callable*> workQueue;
-  std::atomic<size_t> workQueueSize;
+  boost::lockfree::queue<Work::Callable*> work_queue;
+  std::atomic<size_t> work_queue_size;
 
   void spawnWorkers(size_t n);
 };
@@ -156,10 +155,10 @@ inline std::future<T> Pool::postWork(std::function<T()> callable, Work::Type con
   /* evil move hack */
   auto move_promise = make_move_on_copy(std::move(promise));
 
-  std::unique_lock<std::mutex> workSignalLock(workSignalMutex);
-  ++workQueueSize;
-  workQueue.push(new Work::Callable([move_callable, move_promise, type]() mutable { move_promise.Value().set_value((move_callable.Value())()); return type; }));
-  workSignal.notify_one();
+  std::unique_lock<std::mutex> workSignalLock(work_signal_mutex);
+  ++work_queue_size;
+  work_queue.push(new Work::Callable([move_callable, move_promise, type]() mutable { move_promise.Value().set_value((move_callable.Value())()); return type; }));
+  work_signal.notify_one();
 
   return future;
 }
@@ -176,10 +175,10 @@ inline std::future<void> Pool::postWork(std::function<void()> callable, Work::Ty
   /* evil move hack */
   auto move_promise = make_move_on_copy(std::move(promise));
 
-  std::unique_lock<std::mutex> workSignalLock(workSignalMutex);
-  ++workQueueSize;
-  workQueue.push(new Work::Callable([move_callable, move_promise, type]() mutable { (move_callable.Value())(); move_promise.Value().set_value(); return type; }));
-  workSignal.notify_one();
+  std::unique_lock<std::mutex> workSignalLock(work_signal_mutex);
+  ++work_queue_size;
+  work_queue.push(new Work::Callable([move_callable, move_promise, type]() mutable { (move_callable.Value())(); move_promise.Value().set_value(); return type; }));
+  work_signal.notify_one();
 
   return future;
 }

@@ -38,18 +38,18 @@ void Worker::execute()
   {
     Work::Callable* work_;
     //std::cout << "\tThread " << std::this_thread::get_id() << " awaken." << std::endl;
-    while(pool->workQueue.pop(work_))
+    while(pool->work_queue.pop(work_))
     {
       std::unique_ptr<Work::Callable> work(work_);
-      --pool->workQueueSize;
+      --pool->work_queue_size;
       //std::cout << "\tThread " << std::this_thread::get_id() << " worked." << std::endl;
       if((*work)() == Work::Type::TERMINAL)
         return;
     }
 
     //std::cout << "\tThread " << std::this_thread::get_id() << " will sleep." << std::endl;
-    std::unique_lock<std::mutex> workSignalLock(pool->workSignalMutex);
-    pool->workSignal.wait(workSignalLock, [this](){ return (pool->workQueueSize.load()); });
+    std::unique_lock<std::mutex> workSignalLock(pool->work_signal_mutex);
+    pool->work_signal.wait(workSignalLock, [this](){ return (pool->work_queue_size.load()); });
   }
 }
 

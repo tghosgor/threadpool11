@@ -192,7 +192,7 @@ int main()
   * Test case for Issue #1 (fixed): Pool::postWork waiting forever, due to posting work before all threads in pool
   * are properly initialized and waiting.
   */
-  /*{
+  {
     while(true)
     {
       std::cout << "Loop begin" << std::endl;
@@ -225,26 +225,23 @@ int main()
       std::cout << "wait 2 end" << std::endl;
       futures.clear();
 
-      std::cout << "Active thread count: " << pool.getActiveWorkerCount() << std::endl;
-      std::cout << "Inactive thread count: " << pool.getInactiveWorkerCount() << std::endl;
+      std::cout << "Worker count: " << pool.getWorkerCount() << std::endl;
 
-      std::cout << "Increasing thread count by 4." << std::endl;
+      std::cout << "Increasing worker count by 4." << std::endl;
       pool.increaseWorkerCountBy(4);
 
-      std::cout << "Active thread count: " << pool.getActiveWorkerCount() << std::endl;
-      std::cout << "Inactive thread count: " << pool.getInactiveWorkerCount() << std::endl;
+      std::cout << "Worker count: " << pool.getWorkerCount() << std::endl;
 
       std::cout << "Decreasing thread count by 4." << std::endl;
       pool.decreaseWorkerCountBy(4);
 
-      std::cout << "Active thread count: " << pool.getActiveWorkerCount() << std::endl;
-      std::cout << "Inactive thread count: " << pool.getInactiveWorkerCount() << std::endl;
+      std::cout << "Worker count: " << pool.getWorkerCount() << std::endl;
 
       std::cout << std::endl << std::endl << std::endl << std::endl << std::endl << std::endl;
 
       std::this_thread::sleep_for(std::chrono::milliseconds(5));
     }
-  }*/
+  }
 
   std::cout << std::endl << std::endl;
 
