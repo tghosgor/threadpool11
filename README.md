@@ -8,6 +8,10 @@ You can find the **dead simple API** documentation on header comments.
 
 This project was initially developed in just a few hours of free time as I could not find a simple lightweight thread pooling library for my needs.
 
+This project is licensed under:
+
+![LGPLv3](https://raw2.github.com/metherealone/threadpool11/misc/img/lgplv3-147x51.png)
+
 I will be glad to hear about the suggestions/ideas you have about the project, via the [issue reporting section](https://github.com/tghosgor/threadpool11/issues).
 
 All non '_-dev_' branches are safe to use but prefer the latest version.
