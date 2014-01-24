@@ -40,6 +40,8 @@ class Worker
   friend class Pool;
 
 public:
+  Worker(Pool* const& pool);
+  ~Worker() { }
 
 private:
   Worker(Worker&&) = delete;
@@ -58,10 +60,6 @@ private:
 
 private:
   void execute();
-
-public:
-  Worker(Pool* const& pool);
-  ~Worker() { }
 };
 
 }

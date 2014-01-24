@@ -56,24 +56,6 @@ class Pool
 friend class Worker;
 
 public:
-
-private:
-  Pool(Pool&&);
-  Pool(Pool const&);
-  Pool& operator=(Pool&&);
-  Pool& operator=(Pool const&);
-
-  std::deque<Worker> workers;
-
-  mutable std::mutex workSignalMutex;
-  std::condition_variable workSignal;
-
-  boost::lockfree::queue<Work::Callable*> workQueue;
-  std::atomic<size_t> workQueueSize;
-
-  void spawnWorkers(size_t n);
-
-public:
   threadpool11_EXPORT
   Pool(size_t const& workerCount = std::thread::hardware_concurrency());
   ~Pool();
@@ -143,6 +125,22 @@ public:
    */
   threadpool11_EXPORT
   void decreaseWorkerCountBy(size_t n = std::numeric_limits<size_t>::max());
+
+private:
+  Pool(Pool&&);
+  Pool(Pool const&);
+  Pool& operator=(Pool&&);
+  Pool& operator=(Pool const&);
+
+  std::deque<Worker> workers;
+
+  mutable std::mutex workSignalMutex;
+  std::condition_variable workSignal;
+
+  boost::lockfree::queue<Work::Callable*> workQueue;
+  std::atomic<size_t> workQueueSize;
+
+  void spawnWorkers(size_t n);
 };
 
 template<typename T>
