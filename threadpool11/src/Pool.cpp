@@ -25,8 +25,8 @@ This file is part of threadpool11.
 namespace threadpool11
 {
 
-Pool::Pool(size_t const& workerCount) :
-  work_queue_size(0)
+Pool::Pool(size_t const& workerCount)
+  : worker_count(0), work_queue(0), work_queue_size(0)
 {
   spawnWorkers(workerCount);
 }
@@ -38,26 +38,20 @@ Pool::~Pool()
 
 void Pool::joinAll()
 {
-  for(size_t i = 0; i < workers.size(); ++i)
-  {
-    postWork<void>([]() { }, Work::Type::TERMINAL);
-  }
-  for(auto& it : workers)
-    if(it.thread.joinable())
-      it.thread.join();
+  decWorkerCountBy();
 }
 
 size_t Pool::getWorkerCount() const
 {
-  return worker_count;
+  return worker_count.load();
 }
 
-void Pool::setWorkerCount(size_t const& n)
+void Pool::setWorkerCount(size_t const& n, Method const& method)
 {
   if(getWorkerCount() < n)
-    increaseWorkerCountBy(n - getWorkerCount());
+    incWorkerCountBy(n - getWorkerCount());
   else
-    decreaseWorkerCountBy(getWorkerCount() - n);
+    decWorkerCountBy(getWorkerCount() - n, method);
 }
 
 size_t Pool::getWorkQueueSize() const
@@ -65,24 +59,39 @@ size_t Pool::getWorkQueueSize() const
   return work_queue_size.load();
 }
 
-void Pool::increaseWorkerCountBy(size_t const& n)
+void Pool::incWorkerCountBy(size_t const& n)
 {
   spawnWorkers(n);
 }
 
-void Pool::decreaseWorkerCountBy(size_t n)
+void Pool::decWorkerCountBy(size_t n, Method const& method)
 {
   n = std::min(n, getWorkerCount());
-  while(n-- > 0)
-    postWork<void>([]() { }, Work::Type::TERMINAL);
+  if(method == Method::SYNC)
+  {
+    std::vector<std::future<void>> futures;
+    futures.reserve(n);
+    while(n-- > 0)
+      futures.emplace_back(postWork<void>([]() { }, Work::Type::TERMINAL));
+    for(auto& it : futures)
+      it.get();
+  }
+  else
+  {
+    while(n-- > 0)
+      postWork<void>([]() { }, Work::Type::TERMINAL);
+  }
 }
 
 void Pool::spawnWorkers(size_t n)
 {
   //'OR' makes sure the case where one of the expressions is zero, is valid.
-  assert(static_cast<size_t>(inactiveWorkers.size() + n) > n || static_cast<size_t>(inactiveWorkers.size() + n) > inactiveWorkers.size());
+  assert(static_cast<size_t>(worker_count.load() + n) > n || static_cast<size_t>(worker_count.load() + n) > worker_count.load());
   while(n-- > 0)
-    workers.emplace_back(this);
+  {
+    new Worker(this); //! Worker class takes care of its de-allocation itself after here
+    ++worker_count;
+  }
 }
 
 }

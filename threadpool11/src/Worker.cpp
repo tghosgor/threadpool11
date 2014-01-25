@@ -24,16 +24,17 @@ This file is part of threadpool11.
 namespace threadpool11
 {
 
-Worker::Worker(Pool* const& pool) :
-  pool(pool),
-  work(nullptr),
-  thread(std::bind(&Worker::execute, this))
+Worker::Worker(Pool* const& pool)
+  : thread(std::bind(&Worker::execute, this, pool))
 {
   //std::cout << std::this_thread::get_id() << " Worker created" << std::endl;
+  thread.detach();
 }
 
-void Worker::execute()
+void Worker::execute(Pool* const& pool)
 {
+  std::unique_ptr<Worker> self(this); //! auto de-allocation when thread is terminated
+
   while(true)
   {
     Work::Callable* work_;
@@ -44,12 +45,15 @@ void Worker::execute()
       --pool->work_queue_size;
       //std::cout << "\tThread " << std::this_thread::get_id() << " worked." << std::endl;
       if((*work)() == Work::Type::TERMINAL)
+      {
+        --pool->worker_count;
         return;
+      }
     }
 
     //std::cout << "\tThread " << std::this_thread::get_id() << " will sleep." << std::endl;
-    std::unique_lock<std::mutex> workSignalLock(pool->work_signal_mutex);
-    pool->work_signal.wait(workSignalLock, [this](){ return (pool->work_queue_size.load()); });
+    std::unique_lock<std::mutex> workSignalLock(pool->work_signal_mtx);
+    pool->work_signal.wait(workSignalLock, [&pool](){ return (pool->work_queue_size.load()); });
   }
 }
 

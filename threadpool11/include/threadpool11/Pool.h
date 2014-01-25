@@ -56,6 +56,36 @@ class Pool
 friend class Worker;
 
 public:
+  enum class Method
+  {
+    SYNC,
+    ASYNC
+  };
+
+private:
+  Pool(Pool&&);
+  Pool(Pool const&);
+  Pool& operator=(Pool&&);
+  Pool& operator=(Pool const&);
+
+  std::atomic<size_t> worker_count;
+
+  mutable std::mutex work_signal_mtx;
+  //bool work_signal_prot; //! wake up protection // <- work_queue_size is used instead of this
+  std::condition_variable work_signal;
+
+  boost::lockfree::queue<Work::Callable*> work_queue;
+  std::atomic<size_t> work_queue_size;
+
+  void spawnWorkers(size_t n);
+
+  /*!
+   * \brief executor
+   * This is run by different threads to do necessary operations for queue processing.
+   */
+  void executor(std::unique_ptr<std::thread> self);
+
+public:
   threadpool11_EXPORT
   Pool(size_t const& workerCount = std::thread::hardware_concurrency());
   ~Pool();
@@ -69,7 +99,7 @@ public:
    */
   template<typename T>
   threadpool11_EXPORT
-  std::future<T> postWork(std::function<T()> callable, Work::Type const type = Work::Type::STD, Work::Prio const priority = Work::Prio::DEFERRED);
+  std::future<T> postWork(std::function<T()> callable, Work::Type const type = Work::Type::STD);
 
   /*!
    * This function joins all the threads in the thread pool as fast as possible.
@@ -90,61 +120,61 @@ public:
    * \return The number of worker threads.
    */
   threadpool11_EXPORT
-  size_t getWorkerCount() const;
+  decltype(worker_count.load()) getWorkerCount() const;
 
   /*!
    * \brief setWorkerCount
    * \param n
-   * Sets the number of workers to 'n'
+   *
+   * WARNING: This function behaves different based on second parameter. (Only if decreasing)
+   *
+   * Method::ASYNC: It will return before the threads are joined. It will just post
+   *  'n' requests for termination. This means that if you call this function multiple times,
+   *  worker termination requests will pile up. It can even kill the newly
+   *  created workers if all workers are removed before all requests are processed.
+   *
+   * Method::SYNC: It won't return until the specified number of workers are actually destroyed.
+   *  There still may be a few milliseconds delay before value returned by Pool::getWorkerCount is updated.
+   *  But it will be more accurate compared to ASYNC one.
    */
   threadpool11_EXPORT
-  void setWorkerCount(size_t const& n);
+  void setWorkerCount(decltype(worker_count.load()) const& n, Method const& method = Method::ASYNC);
 
   /*!
    * \brief getWorkQueueSize
    * \return The number of work items that has not been acquired by workers.
    */
   threadpool11_EXPORT
-  size_t getWorkQueueSize() const;
+  decltype(work_queue_size.load()) getWorkQueueSize() const;
 
   /*!
    * Increases the number of threads in the pool by n.
    */
   threadpool11_EXPORT
-  void increaseWorkerCountBy(size_t const& n);
+  void incWorkerCountBy(decltype(worker_count.load()) const& n);
 
   /*!
    * Tries to decrease the number of threads in the pool by n.
    * Setting 'n' higher than the number of workers has no effect.
    *
-   * WARNING: This function is async. It will return before the threads are joined. It will just post
-   * 'n' requests for termination. This means that if you call this function multiple times,
-   * worker termination requests will pile up. It can even kill the newly
-   * created workers if all workers are removed before all requests are processed.
+   * WARNING: This function behaves different based on second parameter.
+   *
+   * Method::ASYNC: It will return before the threads are joined. It will just post
+   *  'n' requests for termination. This means that if you call this function multiple times,
+   *  worker termination requests will pile up. It can even kill the newly
+   *  created workers if all workers are removed before all requests are processed.
+   *
+   * Method::SYNC: It won't return until the specified number of workers are actually destroyed.
+   *  There still may be a few milliseconds delay before value returned by Pool::getWorkerCount is updated.
+   *  But it will be more accurate compared to ASYNC one.
    */
   threadpool11_EXPORT
-  void decreaseWorkerCountBy(size_t n = std::numeric_limits<size_t>::max());
-
-private:
-  Pool(Pool&&);
-  Pool(Pool const&);
-  Pool& operator=(Pool&&);
-  Pool& operator=(Pool const&);
-
-  std::deque<Worker> workers;
-
-  mutable std::mutex work_signal_mutex;
-  std::condition_variable work_signal;
-
-  boost::lockfree::queue<Work::Callable*> work_queue;
-  std::atomic<size_t> work_queue_size;
-
-  void spawnWorkers(size_t n);
+  void decWorkerCountBy(decltype(worker_count.load()) n = std::numeric_limits<decltype(worker_count.load())>::max(), Method const& method = Method::ASYNC);
 };
 
 template<typename T>
 threadpool11_EXPORT
-inline std::future<T> Pool::postWork(std::function<T()> callable, Work::Type const type, Work::Prio const prio)
+inline std::future<T> Pool::postWork(std::function<T()> callable, Work::Type const type)
 {
   std::promise<T> promise;
   auto future = promise.get_future();
@@ -155,9 +185,12 @@ inline std::future<T> Pool::postWork(std::function<T()> callable, Work::Type con
   /* evil move hack */
   auto move_promise = make_move_on_copy(std::move(promise));
 
-  std::unique_lock<std::mutex> workSignalLock(work_signal_mutex);
+  std::unique_lock<std::mutex> workSignalLock(work_signal_mtx);
   ++work_queue_size;
-  work_queue.push(new Work::Callable([move_callable, move_promise, type]() mutable { move_promise.Value().set_value((move_callable.Value())()); return type; }));
+  work_queue.push(new Work::Callable([move_callable, move_promise, type]() mutable {
+    move_promise.Value().set_value( (move_callable.Value()) () );
+    return type;
+  }));
   work_signal.notify_one();
 
   return future;
@@ -165,7 +198,7 @@ inline std::future<T> Pool::postWork(std::function<T()> callable, Work::Type con
 
 template<>
 threadpool11_EXPORT
-inline std::future<void> Pool::postWork(std::function<void()> callable, Work::Type const type, Work::Prio const prio)
+inline std::future<void> Pool::postWork(std::function<void()> callable, Work::Type const type)
 {
   std::promise<void> promise;
   auto future = promise.get_future();
@@ -175,9 +208,13 @@ inline std::future<void> Pool::postWork(std::function<void()> callable, Work::Ty
   /* evil move hack */
   auto move_promise = make_move_on_copy(std::move(promise));
 
-  std::unique_lock<std::mutex> workSignalLock(work_signal_mutex);
+  std::unique_lock<std::mutex> workSignalLock(work_signal_mtx);
   ++work_queue_size;
-  work_queue.push(new Work::Callable([move_callable, move_promise, type]() mutable { (move_callable.Value())(); move_promise.Value().set_value(); return type; }));
+  work_queue.push(new Work::Callable([move_callable, move_promise, type]() mutable {
+    (move_callable.Value()) ();
+    move_promise.Value().set_value();
+    return type;
+  }));
   work_signal.notify_one();
 
   return future;

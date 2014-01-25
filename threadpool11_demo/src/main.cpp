@@ -72,11 +72,11 @@ int main()
       std::cout << "Demo 1\n";
       std::cout << "Executing 5 test1Func() WITHOUT posting to thread pool:\n";
       auto begin = std::chrono::high_resolution_clock::now();
+      /*test1Func();
       test1Func();
       test1Func();
       test1Func();
-      test1Func();
-      test1Func();
+      test1Func();*/
       auto end = std::chrono::high_resolution_clock::now();
       std::cout << "\texecution took "
         << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() << " milliseconds.\n\n";
@@ -105,13 +105,19 @@ int main()
   */
   {
     std::cout << "Increasing worker count by 5." << std::endl;
-    pool.increaseWorkerCountBy(5);
+    pool.incWorkerCountBy(5);
     std::cout << "Current worker count is " << pool.getWorkerCount()
-              << ". Setting worker count to " << std::thread::hardware_concurrency() << "... " << std::flush;
+              << ". Async setting worker count to " << std::thread::hardware_concurrency() << "... " << std::flush;
     pool.setWorkerCount(std::thread::hardware_concurrency());
-    std::cout << "The new worker count is (may be still) " << pool.getWorkerCount() << "." << std::endl;
+    std::cout << "The new worker count is (may still be 13) " << pool.getWorkerCount() << "." << std::endl;
     std::cout << "Waiting 1 second..." << std::endl;
     std::this_thread::sleep_for(std::chrono::seconds(1));
+    std::cout << "The new worker count is " << pool.getWorkerCount() << "." << std::endl;
+    std::cout << "Increasing worker count by 5." << std::endl;
+    pool.incWorkerCountBy(5);
+    std::cout << "Current worker count is " << pool.getWorkerCount()
+              << ". Sync setting worker count to " << std::thread::hardware_concurrency() << "... " << std::flush;
+    pool.setWorkerCount(std::thread::hardware_concurrency(), threadpool11::Pool::Method::SYNC);
     std::cout << "The new worker count is " << pool.getWorkerCount() << "." << std::endl << std::endl;
   }
 
@@ -228,12 +234,12 @@ int main()
       std::cout << "Worker count: " << pool.getWorkerCount() << std::endl;
 
       std::cout << "Increasing worker count by 4." << std::endl;
-      pool.increaseWorkerCountBy(4);
+      pool.incWorkerCountBy(4);
 
       std::cout << "Worker count: " << pool.getWorkerCount() << std::endl;
 
       std::cout << "Decreasing thread count by 4." << std::endl;
-      pool.decreaseWorkerCountBy(4);
+      pool.decWorkerCountBy(4);
 
       std::cout << "Worker count: " << pool.getWorkerCount() << std::endl;
 

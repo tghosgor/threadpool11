@@ -39,27 +39,23 @@ class Worker
 {
   friend class Pool;
 
-public:
-  Worker(Pool* const& pool);
-  ~Worker() { }
-
 private:
   Worker(Worker&&) = delete;
   Worker(Worker const&) = delete;
   Worker& operator=(Worker&&) = delete;
   Worker& operator=(Worker const&) = delete;
 
-  Pool* const pool;
-
-  Work::Callable* work;
-
   /*!
   * This should always stay at bottom so that it is called at the most end.
   */
   std::thread thread;
 
+public:
+  Worker(Pool* const& pool);
+  ~Worker() { }
+
 private:
-  void execute();
+  void execute(Pool* const& pool);
 };
 
 }
