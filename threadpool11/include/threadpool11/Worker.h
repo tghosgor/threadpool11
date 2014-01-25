@@ -1,4 +1,4 @@
-﻿/*!
+/*!
 Copyright (c) 2013, 2014, Tolga HOŞGÖR
 All rights reserved.
 
@@ -52,7 +52,10 @@ private:
 
 public:
   Worker(Pool* const& pool);
-  ~Worker() { }
+  ~Worker()
+  {
+    //std::cout << "Worker destructed." << std::endl;
+  }
 
 private:
   void execute(Pool* const& pool);

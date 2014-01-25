@@ -33,7 +33,7 @@ Worker::Worker(Pool* const& pool)
 
 void Worker::execute(Pool* const& pool)
 {
-  std::unique_ptr<Worker> self(this); //! auto de-allocation when thread is terminated
+  const std::unique_ptr<Worker> self(this); //! auto de-allocation when thread is terminated
 
   while(true)
   {
@@ -41,7 +41,7 @@ void Worker::execute(Pool* const& pool)
     //std::cout << "\tThread " << std::this_thread::get_id() << " awaken." << std::endl;
     while(pool->work_queue.pop(work_))
     {
-      std::unique_ptr<Work::Callable> work(work_);
+      const std::unique_ptr<Work::Callable> work(work_);
       --pool->work_queue_size;
       //std::cout << "\tThread " << std::this_thread::get_id() << " worked." << std::endl;
       if((*work)() == Work::Type::TERMINAL)

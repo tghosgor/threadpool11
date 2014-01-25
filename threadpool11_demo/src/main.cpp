@@ -253,8 +253,6 @@ int main()
 
   std::cout << "Demos completed." << std::endl;
 
-  pool.joinAll();
-
   //std::cin.get();
   return 0;
 }

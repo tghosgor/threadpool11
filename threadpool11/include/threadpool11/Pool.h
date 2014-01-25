@@ -100,6 +100,7 @@ public:
   template<typename T>
   threadpool11_EXPORT
   std::future<T> postWork(std::function<T()> callable, Work::Type const type = Work::Type::STD);
+  //TODO: convert 'type' above to const& when MSVC fixes that bug.
 
   /*!
    * This function joins all the threads in the thread pool as fast as possible.
