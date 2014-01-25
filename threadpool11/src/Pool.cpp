@@ -25,10 +25,10 @@ This file is part of threadpool11.
 namespace threadpool11
 {
 
-Pool::Pool(size_t const& workerCount)
+Pool::Pool(size_t const& worker_count)
   : worker_count(0), work_queue(0), work_queue_size(0)
 {
-  spawnWorkers(workerCount);
+  spawnWorkers(worker_count);
 }
 
 Pool::~Pool()
@@ -41,7 +41,7 @@ void Pool::joinAll()
   decWorkerCountBy();
 }
 
-size_t Pool::getWorkerCount() const
+decltype(Pool::worker_count.load()) Pool::getWorkerCount() const
 {
   return worker_count.load();
 }
@@ -54,7 +54,7 @@ void Pool::setWorkerCount(size_t const& n, Method const& method)
     decWorkerCountBy(getWorkerCount() - n, method);
 }
 
-size_t Pool::getWorkQueueSize() const
+decltype(Pool::work_queue_size.load()) Pool::getWorkQueueSize() const
 {
   return work_queue_size.load();
 }
@@ -86,7 +86,7 @@ void Pool::decWorkerCountBy(size_t n, Method const& method)
 void Pool::spawnWorkers(size_t n)
 {
   //'OR' makes sure the case where one of the expressions is zero, is valid.
-  assert(static_cast<size_t>(worker_count.load() + n) > n || static_cast<size_t>(worker_count.load() + n) > worker_count.load());
+  assert(static_cast<size_t>(worker_count + n) > n || static_cast<size_t>(worker_count + n) > worker_count);
   while(n-- > 0)
   {
     new Worker(this); //! Worker class takes care of its de-allocation itself after here

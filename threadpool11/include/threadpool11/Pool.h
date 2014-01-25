@@ -28,8 +28,6 @@ This file is part of threadpool11.
 #include <condition_variable>
 #include <deque>
 #include <future>
-#include <list>
-#include <forward_list>
 #include <memory>
 #include <mutex>
 
@@ -87,7 +85,7 @@ private:
 
 public:
   threadpool11_EXPORT
-  Pool(size_t const& workerCount = std::thread::hardware_concurrency());
+  Pool(size_t const& worker_count = std::thread::hardware_concurrency());
   ~Pool();
 
   /*!
@@ -96,6 +94,8 @@ public:
    * If there are no threads left (i.e. you called Pool::joinAll(); prior to
    * this function) all the works you post gets enqueued. If you spawn new threads in
    * future, they will be executed then.
+   *
+   * Properties: thread-safe.
    */
   template<typename T>
   threadpool11_EXPORT
@@ -117,7 +117,9 @@ public:
 
   /*!
    * \brief Pool::getWorkerCount
-   * not thread-safe.
+   *
+   * Properties: thread-safe.
+   *
    * \return The number of worker threads.
    */
   threadpool11_EXPORT
@@ -143,6 +145,9 @@ public:
 
   /*!
    * \brief getWorkQueueSize
+   *
+   * Properties: thread-safe.
+   *
    * \return The number of work items that has not been acquired by workers.
    */
   threadpool11_EXPORT
@@ -150,6 +155,8 @@ public:
 
   /*!
    * Increases the number of threads in the pool by n.
+   *
+   * Properties: thread-safe.
    */
   threadpool11_EXPORT
   void incWorkerCountBy(decltype(worker_count.load()) const& n);
@@ -157,6 +164,7 @@ public:
   /*!
    * Tries to decrease the number of threads in the pool by n.
    * Setting 'n' higher than the number of workers has no effect.
+   * Calling without arguments asynchronously terminates all workers.
    *
    * WARNING: This function behaves different based on second parameter.
    *
@@ -168,6 +176,8 @@ public:
    * Method::SYNC: It won't return until the specified number of workers are actually destroyed.
    *  There still may be a few milliseconds delay before value returned by Pool::getWorkerCount is updated.
    *  But it will be more accurate compared to ASYNC one.
+   *
+   * Properties: thread-safe.
    */
   threadpool11_EXPORT
   void decWorkerCountBy(decltype(worker_count.load()) n = std::numeric_limits<decltype(worker_count.load())>::max(), Method const& method = Method::ASYNC);
