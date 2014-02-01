@@ -123,7 +123,7 @@ public:
    * \return The number of worker threads.
    */
   threadpool11_EXPORT
-  decltype(worker_count.load()) getWorkerCount() const;
+  size_t getWorkerCount() const;
 
   /*!
    * \brief setWorkerCount
@@ -141,7 +141,7 @@ public:
    *  But it will be more accurate compared to ASYNC one.
    */
   threadpool11_EXPORT
-  void setWorkerCount(decltype(worker_count.load()) const& n, Method const& method = Method::ASYNC);
+  void setWorkerCount(size_t const& n, Method const& method = Method::ASYNC);
 
   /*!
    * \brief getWorkQueueSize
@@ -151,7 +151,7 @@ public:
    * \return The number of work items that has not been acquired by workers.
    */
   threadpool11_EXPORT
-  decltype(work_queue_size.load()) getWorkQueueSize() const;
+  size_t getWorkQueueSize() const;
 
   /*!
    * Increases the number of threads in the pool by n.
@@ -159,7 +159,7 @@ public:
    * Properties: thread-safe.
    */
   threadpool11_EXPORT
-  void incWorkerCountBy(decltype(worker_count.load()) const& n);
+  void incWorkerCountBy(size_t const& n);
 
   /*!
    * Tries to decrease the number of threads in the pool by n.
@@ -180,7 +180,7 @@ public:
    * Properties: thread-safe.
    */
   threadpool11_EXPORT
-  void decWorkerCountBy(decltype(worker_count.load()) n = std::numeric_limits<decltype(worker_count.load())>::max(), Method const& method = Method::ASYNC);
+  void decWorkerCountBy(size_t n = std::numeric_limits<size_t>::max(), Method const& method = Method::ASYNC);
 };
 
 template<typename T>

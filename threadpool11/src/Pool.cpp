@@ -41,7 +41,7 @@ void Pool::joinAll()
   decWorkerCountBy();
 }
 
-decltype(Pool::worker_count.load()) Pool::getWorkerCount() const
+size_t Pool::getWorkerCount() const
 {
   return worker_count.load();
 }
@@ -54,7 +54,7 @@ void Pool::setWorkerCount(size_t const& n, Method const& method)
     decWorkerCountBy(getWorkerCount() - n, method);
 }
 
-decltype(Pool::work_queue_size.load()) Pool::getWorkQueueSize() const
+size_t Pool::getWorkQueueSize() const
 {
   return work_queue_size.load();
 }
