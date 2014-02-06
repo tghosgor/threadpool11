@@ -38,7 +38,7 @@ Pool::~Pool()
 
 void Pool::joinAll()
 {
-  decWorkerCountBy();
+  decWorkerCountBy(std::numeric_limits<size_t>::max(), Method::SYNC);
 }
 
 size_t Pool::getWorkerCount() const
