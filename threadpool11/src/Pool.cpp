@@ -26,7 +26,7 @@ namespace threadpool11
 {
 
 Pool::Pool(size_t const& worker_count)
-  : worker_count(0), work_queue(0), work_queue_size(0)
+  : worker_count(0), active_worker_count(0), work_queue(0), work_queue_size(0)
 {
   spawnWorkers(worker_count);
 }
@@ -34,6 +34,16 @@ Pool::Pool(size_t const& worker_count)
 Pool::~Pool()
 {
   joinAll();
+}
+
+void Pool::waitAll()
+{
+  std::unique_lock<std::mutex> lock(notify_all_finished_signal_mtx);
+  if(active_worker_count > 0)
+  {
+    notify_all_finished_signal.wait(lock, [this](){ return are_all_really_finished; });
+    are_all_really_finished = false;
+  }
 }
 
 void Pool::joinAll()
@@ -57,6 +67,16 @@ void Pool::setWorkerCount(size_t const& n, Method const& method)
 size_t Pool::getWorkQueueSize() const
 {
   return work_queue_size.load();
+}
+
+size_t Pool::getActiveWorkerCount() const
+{
+  return active_worker_count.load();
+}
+
+size_t Pool::getInactiveWorkerCount() const
+{
+  return worker_count.load() - active_worker_count.load();
 }
 
 void Pool::incWorkerCountBy(size_t const& n)
