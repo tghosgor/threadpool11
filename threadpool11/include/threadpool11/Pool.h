@@ -67,6 +67,12 @@ private:
   Pool& operator=(Pool const&);
 
   std::atomic<size_t> worker_count;
+  std::atomic<size_t> active_worker_count;
+  
+  
+  mutable std::mutex notify_all_finished_signal_mtx;
+  std::condition_variable notify_all_finished_signal;
+  bool are_all_really_finished;
 
   mutable std::mutex work_signal_mtx;
   //bool work_signal_prot; //! wake up protection // <- work_queue_size is used instead of this
@@ -101,6 +107,13 @@ public:
   threadpool11_EXPORT
   std::future<T> postWork(std::function<T()> callable, Work::Type const type = Work::Type::STD);
   //TODO: convert 'type' above to const& when MSVC fixes that bug.
+  
+  /**
+   * This function suspends the calling thread until all posted works are finished and, therefore, all worker
+   * threads are free. It guarantees you that before the function returns, all queued works are finished.
+   */
+  threadpool11_EXPORT
+  void waitAll();
 
   /*!
    * This function joins all the threads in the thread pool as fast as possible.
@@ -152,6 +165,18 @@ public:
    */
   threadpool11_EXPORT
   size_t getWorkQueueSize() const;
+  
+  /**
+   * This function requires a mutex lock so you should call it wisely if you performance is a life matter to you.
+   */
+  threadpool11_EXPORT
+  size_t getActiveWorkerCount() const;
+  
+  /**
+   * This function requires a mutex lock so you should call it wisely if you performance is a life matter to you.
+   */
+  threadpool11_EXPORT
+  size_t getInactiveWorkerCount() const;
 
   /*!
    * Increases the number of threads in the pool by n.

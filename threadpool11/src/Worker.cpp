@@ -43,13 +43,24 @@ void Worker::execute(Pool* const& pool)
     {
       const std::unique_ptr<Work::Callable> work(work_);
       --pool->work_queue_size;
+      ++pool->active_worker_count;
       //std::cout << "\tThread " << std::this_thread::get_id() << " worked." << std::endl;
       if((*work)() == Work::Type::TERMINAL)
       {
+        --pool->active_worker_count;
         --pool->worker_count;
         return;
       }
+      
+      --pool->active_worker_count;
     }
+    
+    if(pool->active_worker_count == 0)
+	{
+		std::unique_lock<std::mutex> notifyAllFinishedLock(pool->notify_all_finished_signal_mtx);
+		pool->are_all_really_finished = true;
+		pool->notify_all_finished_signal.notify_all();
+	}
 
     //std::cout << "\tThread " << std::this_thread::get_id() << " will sleep." << std::endl;
     std::unique_lock<std::mutex> workSignalLock(pool->work_signal_mtx);
