@@ -2,7 +2,7 @@ add_definitions(-Dthreadpool11_EXPORTING)
 
 include_directories(include)
 
-add_library(threadpool11 STATIC src/Pool.cpp src/Worker.cpp include/threadpool11/Pool.h include/threadpool11/Worker.h include/threadpool11/Helper.hpp)
+add_library(threadpool11_lib STATIC src/Pool.cpp src/Worker.cpp include/threadpool11/Pool.h include/threadpool11/Worker.h include/threadpool11/Helper.hpp)
 
 if(MAKE_CXX_COMPILER_ID MATCHES GNU OR
     CMAKE_CXX_COMPILER_ID MATCHES Clang)
