@@ -6,7 +6,7 @@ add_library(threadpool11_lib STATIC src/Pool.cpp src/Worker.cpp include/threadpo
 
 if(MAKE_CXX_COMPILER_ID MATCHES GNU OR
     CMAKE_CXX_COMPILER_ID MATCHES Clang)
-  target_link_libraries(threadpool11 pthread)
+  target_link_libraries(threadpool11_lib pthread)
 endif()
 
 if(MAKE_CXX_COMPILER_ID MATCHES GNU OR
@@ -15,7 +15,7 @@ install(FILES include/threadpool11/threadpool11.h DESTINATION include/threadpool
 install(FILES include/threadpool11/Worker.h DESTINATION include/threadpool11)
 install(FILES include/threadpool11/Pool.h DESTINATION include/threadpool11)
 install(FILES include/threadpool11/Helper.hpp DESTINATION include/threadpool11)
-install(TARGETS threadpool11
+install(TARGETS threadpool11_lib
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib
 )
