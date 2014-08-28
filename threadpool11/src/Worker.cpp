@@ -56,11 +56,11 @@ void Worker::execute(Pool* const& pool)
     }
     
     if(pool->active_worker_count == 0)
-	{
-		std::unique_lock<std::mutex> notifyAllFinishedLock(pool->notify_all_finished_signal_mtx);
-		pool->are_all_really_finished = true;
-		pool->notify_all_finished_signal.notify_all();
-	}
+    {
+      std::unique_lock<std::mutex> notifyAllFinishedLock(pool->notify_all_finished_signal_mtx);
+      pool->are_all_really_finished = true;
+      pool->notify_all_finished_signal.notify_all();
+    }
 
     //std::cout << "\tThread " << std::this_thread::get_id() << " will sleep." << std::endl;
     std::unique_lock<std::mutex> workSignalLock(pool->work_signal_mtx);
