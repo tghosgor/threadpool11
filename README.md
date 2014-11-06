@@ -1,4 +1,4 @@
-![threadpool11](https://raw2.github.com/metherealone/threadpool11/misc/img/logo.png)
+![threadpool11](https://raw.githubusercontent.com/tghosgor/threadpool11/misc/img/logo.png)
 threadpool11
 ==========
 
@@ -10,7 +10,7 @@ This project was initially developed in just a few hours of free time as I could
 
 This project is licensed under:
 
-[![LGPLv3](https://raw2.github.com/metherealone/threadpool11/misc/img/lgplv3-147x51.png)](http://www.gnu.org/licenses/lgpl-3.0.html)
+[![LGPLv3](https://raw.githubusercontent.com/tghosgor/threadpool11/misc/img/lgplv3-147x51.png)](http://www.gnu.org/licenses/lgpl-3.0.html)
 
 I will be glad to hear about the suggestions/ideas you have about the project, via the [issue reporting section](https://github.com/tghosgor/threadpool11/issues).
 
