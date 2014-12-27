@@ -49,7 +49,7 @@ int main(int argc, char* argv[]) {
     const auto begin = std::chrono::high_resolution_clock::now();
 
     for (auto i = 0u; i < iter; ++i) {
-      futures[i] = pool.postWork<std::size_t>([i]() {return factorial(i);});
+      futures[i] = pool.postWork<std::size_t>([i]() { return factorial(i); });
     }
 
     for (auto i = 0u; i < iter; ++i) {
@@ -67,7 +67,7 @@ int main(int argc, char* argv[]) {
 
     const auto begin = std::chrono::high_resolution_clock::now();
 
-    #pragma omp parallel for
+#pragma omp parallel for
     for (auto i = 0u; i < iter; ++i) {
       a[i] = factorial(i);
     }

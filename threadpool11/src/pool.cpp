@@ -20,12 +20,17 @@ This file is part of threadpool11.
 
 #include "threadpool11/pool.hpp"
 
+#include <boost/lockfree/queue.hpp>
+
 #include <algorithm>
 
 namespace threadpool11 {
 
 Pool::Pool(std::size_t worker_count)
-    : m_workerCount(0), m_activeWorkerCount(0), m_workQueue(0), m_workQueueSize(0) {
+    : m_workerCount(0)
+    , m_activeWorkerCount(0)
+    , m_workQueue(new boost::lockfree::queue<Work::Callable*>(0))
+    , m_workQueueSize(0) {
   spawnWorkers(worker_count);
 }
 
@@ -75,10 +80,18 @@ void Pool::decWorkerCountBy(size_t n, Method method) {
 
 void Pool::spawnWorkers(std::size_t n) {
   //'OR' makes sure the case where one of the expressions is zero, is valid.
-  assert(static_cast<size_t>(m_workerCount + n) > n || static_cast<size_t>(m_workerCount + n) > m_workerCount);
+  assert(static_cast<size_t>(m_workerCount + n) > n ||
+         static_cast<size_t>(m_workerCount + n) > m_workerCount);
   while (n-- > 0) {
     new Worker(*this); //! Worker class takes care of its de-allocation itself after here
     ++m_workerCount;
   }
+}
+
+void Pool::push(Work::Callable* workFunc) {
+  std::unique_lock<std::mutex> workSignalLock(m_workSignalMutex);
+  ++m_workQueueSize;
+  m_workQueue->push(workFunc);
+  m_workSignal.notify_one();
 }
 }

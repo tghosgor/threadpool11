@@ -23,8 +23,6 @@ This file is part of threadpool11.
 #include "worker.hpp"
 #include "utility.hpp"
 
-#include <boost/lockfree/queue.hpp>
-
 #include <atomic>
 #include <cassert>
 #include <condition_variable>
@@ -41,6 +39,19 @@ This file is part of threadpool11.
 #else
 #define threadpool11_EXPORT
 #endif
+
+namespace boost {
+namespace parameter {
+struct void_;
+}
+namespace lockfree {
+template <typename T,
+          class A0,
+          class A1,
+          class A2>
+class queue;
+}
+}
 
 namespace threadpool11 {
 
@@ -64,8 +75,7 @@ public:
    * Properties: thread-safe.
    */
   template <typename T>
-  threadpool11_EXPORT std::future<T> postWork(std::function<T ()> callable,
-                                              Work::Type type = Work::Type::STD);
+  threadpool11_EXPORT std::future<T> postWork(std::function<T()> callable, Work::Type type = Work::Type::STD);
   // TODO: convert 'type' above to const& when MSVC fixes that bug.
 
   /**
@@ -175,6 +185,12 @@ private:
    */
   void executor(std::unique_ptr<std::thread> self);
 
+  /**
+   * @brief push Internal usage.
+   * @param workFunc
+   */
+  void push(Work::Callable* workFunc);
+
 private:
   std::atomic<size_t> m_workerCount;
   std::atomic<size_t> m_activeWorkerCount;
@@ -187,7 +203,10 @@ private:
   // bool work_signal_prot; //! wake up protection // <- work_queue_size is used instead of this
   std::condition_variable m_workSignal;
 
-  boost::lockfree::queue<Work::Callable*> m_workQueue;
+  std::unique_ptr<
+      boost::lockfree::
+          queue<Work::Callable*, boost::parameter::void_, boost::parameter::void_, boost::parameter::void_>>
+      m_workQueue;
   std::atomic<size_t> m_workQueueSize;
 };
 
@@ -202,13 +221,12 @@ threadpool11_EXPORT inline std::future<T> Pool::postWork(std::function<T()> call
   /* evil move hack */
   auto move_promise = make_move_on_copy(std::move(promise));
 
-  std::unique_lock<std::mutex> workSignalLock(m_workSignalMutex);
-  ++m_workQueueSize;
-  m_workQueue.push(new Work::Callable([move_callable, move_promise, type]() mutable {
+  auto workFunc = new Work::Callable([move_callable, move_promise, type]() mutable {
     move_promise.Value().set_value((move_callable.Value())());
     return type;
-  }));
-  m_workSignal.notify_one();
+  });
+
+  push(workFunc);
 
   return future;
 }
@@ -224,14 +242,13 @@ threadpool11_EXPORT inline std::future<void> Pool::postWork(std::function<void()
   /* evil move hack */
   auto move_promise = make_move_on_copy(std::move(promise));
 
-  std::unique_lock<std::mutex> workSignalLock(m_workSignalMutex);
-  ++m_workQueueSize;
-  m_workQueue.push(new Work::Callable([move_callable, move_promise, type]() mutable {
+  auto workFunc = new Work::Callable([move_callable, move_promise, type]() mutable {
     (move_callable.Value())();
     move_promise.Value().set_value();
     return type;
-  }));
-  m_workSignal.notify_one();
+  });
+
+  push(workFunc);
 
   return future;
 }

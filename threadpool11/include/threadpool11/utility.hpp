@@ -34,8 +34,10 @@ typedef std::function<Work::Type()> Callable;
 template <typename T>
 class move_on_copy {
 public:
-  move_on_copy(T&& aValue) : value(std::move(aValue)) {}
-  move_on_copy(const move_on_copy& other) : value(std::move(other.value)) {}
+  move_on_copy(T&& aValue)
+      : value(std::move(aValue)) {}
+  move_on_copy(const move_on_copy& other)
+      : value(std::move(other.value)) {}
 
   move_on_copy& operator=(move_on_copy&& aValue) = delete;      // not needed here
   move_on_copy& operator=(const move_on_copy& aValue) = delete; // not needed here

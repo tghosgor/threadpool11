@@ -21,6 +21,8 @@ This file is part of threadpool11.
 #include "threadpool11/pool.hpp"
 #include "threadpool11/worker.hpp"
 
+#include <boost/lockfree/queue.hpp>
+
 namespace threadpool11 {
 
 Worker::Worker(Pool& pool)
@@ -35,7 +37,7 @@ void Worker::execute(Pool& pool) {
   while (true) {
     Work::Callable* work_;
     // std::cout << "\tThread " << std::this_thread::get_id() << " awaken." << std::endl;
-    while (pool.m_workQueue.pop(work_)) {
+    while (pool.m_workQueue->pop(work_)) {
       const std::unique_ptr<Work::Callable> work(work_);
       --pool.m_workQueueSize;
       ++pool.m_activeWorkerCount;

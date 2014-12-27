@@ -52,7 +52,5 @@ private:
   * This should always stay at bottom so that it is called at the most end.
   */
   std::thread thread;
-
-private:
 };
 }
