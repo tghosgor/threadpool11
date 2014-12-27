@@ -12,6 +12,20 @@ This project is licensed under:
 
 [![LGPLv3](https://raw.githubusercontent.com/tghosgor/threadpool11/misc/img/lgplv3-147x51.png)](http://www.gnu.org/licenses/lgpl-3.0.html)
 
+##threadpool11 performance compared to OpenMP
+
+Here is a result of OpenMP demo found it the tree.
+> Your machine's hardware concurrency is 8
+
+> threadpool11 execution took 18571 milliseconds.
+
+> openmp execution took 24800 milliseconds.
+
+> gcc -v
+> gcc version 4.9.2 (GCC)
+
+Testing code can be found in project tree.
+
 I will be glad to hear about the suggestions/ideas you have about the project, via the [issue reporting section](https://github.com/tghosgor/threadpool11/issues).
 
 All non '_-dev_' branches are safe to use but prefer the latest version.
