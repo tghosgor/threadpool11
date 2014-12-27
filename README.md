@@ -17,9 +17,9 @@ This project is licensed under:
 Here is a result of OpenMP demo found it the tree.
 > Your machine's hardware concurrency is 8
 
-> threadpool11 execution took 18571 milliseconds.
+> threadpool11 execution took 16953 milliseconds.
 
-> openmp execution took 24800 milliseconds.
+> openmp execution took 25103 milliseconds.
 
 > gcc -v
 > gcc version 4.9.2 (GCC)
