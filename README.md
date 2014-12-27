@@ -14,7 +14,7 @@ This project is licensed under:
 
 ##threadpool11 performance compared to OpenMP
 
-Here is a result of OpenMP demo found it the tree.
+Here is a result of OpenMP demo found in the tree.
 > Your machine's hardware concurrency is 8
 
 > threadpool11 execution took 16953 milliseconds.
@@ -29,10 +29,6 @@ Testing code can be found in project tree.
 I will be glad to hear about the suggestions/ideas you have about the project, via the [issue reporting section](https://github.com/tghosgor/threadpool11/issues).
 
 All non '_-dev_' branches are safe to use but prefer the latest version.
-
-##Dependencies
-###boost::lockfree
-You don't need to have anything external but the project uses `boost::lockfree`. If you have Boost and CMake var `Boost_FOUND` is `true` it will use your boost. If not. there is one in the repo and it will be used.
 
 ##P.S.
 **My bitcoin address:** 1LtsLW5n3jGXHoWGffh8njvh8MQcWmzxVD
