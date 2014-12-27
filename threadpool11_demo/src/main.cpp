@@ -27,6 +27,8 @@ This file is part of threadpool11.
 #include <mutex>
 #include <thread>
 
+namespace {
+
 std::mutex coutMutex;
 
 void test1Func() {
@@ -47,7 +49,9 @@ void test3Func() {
   ++test3Var;
 }
 
-int main() {
+} // NS
+
+int main(int argc, char* argv[]) {
   threadpool11::Pool pool;
 
   std::cout << "Your machine's hardware concurrency is " << std::thread::hardware_concurrency() << std::endl

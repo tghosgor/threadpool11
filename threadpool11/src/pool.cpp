@@ -24,7 +24,7 @@ This file is part of threadpool11.
 
 namespace threadpool11 {
 
-Pool::Pool(size_t const& worker_count)
+Pool::Pool(std::size_t worker_count)
     : m_workerCount(0), m_activeWorkerCount(0), m_workQueue(0), m_workQueueSize(0) {
   spawnWorkers(worker_count);
 }
@@ -43,7 +43,7 @@ void Pool::joinAll() { decWorkerCountBy(std::numeric_limits<size_t>::max(), Meth
 
 size_t Pool::getWorkerCount() const { return m_workerCount.load(); }
 
-void Pool::setWorkerCount(size_t const& n, Method const& method) {
+void Pool::setWorkerCount(std::size_t n, Method method) {
   if (getWorkerCount() < n)
     incWorkerCountBy(n - getWorkerCount());
   else
@@ -56,9 +56,9 @@ size_t Pool::getActiveWorkerCount() const { return m_activeWorkerCount.load(); }
 
 size_t Pool::getInactiveWorkerCount() const { return m_workerCount.load() - m_activeWorkerCount.load(); }
 
-void Pool::incWorkerCountBy(size_t const& n) { spawnWorkers(n); }
+void Pool::incWorkerCountBy(std::size_t n) { spawnWorkers(n); }
 
-void Pool::decWorkerCountBy(size_t n, Method const& method) {
+void Pool::decWorkerCountBy(size_t n, Method method) {
   n = std::min(n, getWorkerCount());
   if (method == Method::SYNC) {
     std::vector<std::future<void>> futures;
@@ -73,11 +73,11 @@ void Pool::decWorkerCountBy(size_t n, Method const& method) {
   }
 }
 
-void Pool::spawnWorkers(size_t n) {
+void Pool::spawnWorkers(std::size_t n) {
   //'OR' makes sure the case where one of the expressions is zero, is valid.
   assert(static_cast<size_t>(m_workerCount + n) > n || static_cast<size_t>(m_workerCount + n) > m_workerCount);
   while (n-- > 0) {
-    new Worker(this); //! Worker class takes care of its de-allocation itself after here
+    new Worker(*this); //! Worker class takes care of its de-allocation itself after here
     ++m_workerCount;
   }
 }

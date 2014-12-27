@@ -20,7 +20,7 @@ This file is part of threadpool11.
 
 #pragma once
 
-#include "helper.hpp"
+#include "utility.hpp"
 
 #include <condition_variable>
 #include <functional>
@@ -36,7 +36,7 @@ class Worker {
   friend class Pool;
 
 public:
-  Worker(Pool* const& pool);
+  Worker(Pool& pool);
   ~Worker() = default;
 
 private:
@@ -45,7 +45,7 @@ private:
   Worker& operator=(Worker&&) = delete;
   Worker& operator=(Worker const&) = delete;
 
-  void execute(Pool* const& pool);
+  void execute(Pool& pool);
 
 private:
   /*!

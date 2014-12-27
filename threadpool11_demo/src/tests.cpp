@@ -8,6 +8,8 @@
 #define TEST_2
 //#define TEST_0
 
+namespace {
+
 int recursiveWork(threadpool11::Pool& pool, int depth) {
   if (depth <= 0)
     return 0;
@@ -15,6 +17,8 @@ int recursiveWork(threadpool11::Pool& pool, int depth) {
   recursiveWork(pool, --depth);
   return result.get();
 }
+
+} // NS
 
 int main(int argc, char* argv[]) {
   try {

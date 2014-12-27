@@ -21,7 +21,7 @@ This file is part of threadpool11.
 #pragma once
 
 #include "worker.hpp"
-#include "helper.hpp"
+#include "utility.hpp"
 
 #include <boost/lockfree/queue.hpp>
 
@@ -51,7 +51,7 @@ public:
   enum class Method { SYNC, ASYNC };
 
 public:
-  threadpool11_EXPORT Pool(size_t const& m_workerCount = std::thread::hardware_concurrency());
+  threadpool11_EXPORT Pool(std::size_t m_workerCount = std::thread::hardware_concurrency());
   ~Pool();
 
   /*!
@@ -64,8 +64,8 @@ public:
    * Properties: thread-safe.
    */
   template <typename T>
-  threadpool11_EXPORT std::future<T> postWork(std::function<T()> callable,
-                                              Work::Type const type = Work::Type::STD);
+  threadpool11_EXPORT std::future<T> postWork(std::function<T ()> callable,
+                                              Work::Type type = Work::Type::STD);
   // TODO: convert 'type' above to const& when MSVC fixes that bug.
 
   /**
@@ -110,7 +110,7 @@ public:
    *  There still may be a few milliseconds delay before value returned by Pool::getWorkerCount is updated.
    *  But it will be more accurate compared to ASYNC one.
    */
-  threadpool11_EXPORT void setWorkerCount(size_t const& n, Method const& method = Method::ASYNC);
+  threadpool11_EXPORT void setWorkerCount(std::size_t n, Method method = Method::ASYNC);
 
   /*!
    * \brief getWorkQueueSize
@@ -138,7 +138,7 @@ public:
    *
    * Properties: thread-safe.
    */
-  threadpool11_EXPORT void incWorkerCountBy(size_t const& n);
+  threadpool11_EXPORT void incWorkerCountBy(std::size_t n);
 
   /*!
    * Tries to decrease the number of threads in the pool by n.
@@ -158,8 +158,8 @@ public:
    *
    * Properties: thread-safe.
    */
-  threadpool11_EXPORT void decWorkerCountBy(size_t n = std::numeric_limits<size_t>::max(),
-                                            Method const& method = Method::ASYNC);
+  threadpool11_EXPORT void decWorkerCountBy(std::size_t n = std::numeric_limits<size_t>::max(),
+                                            Method method = Method::ASYNC);
 
 private:
   Pool(Pool&&) = delete;
@@ -167,7 +167,7 @@ private:
   Pool& operator=(Pool&&) = delete;
   Pool& operator=(Pool const&) = delete;
 
-  void spawnWorkers(size_t n);
+  void spawnWorkers(std::size_t n);
 
   /*!
    * \brief executor
@@ -192,7 +192,7 @@ private:
 };
 
 template <typename T>
-threadpool11_EXPORT inline std::future<T> Pool::postWork(std::function<T()> callable, Work::Type const type) {
+threadpool11_EXPORT inline std::future<T> Pool::postWork(std::function<T()> callable, Work::Type type) {
   std::promise<T> promise;
   auto future = promise.get_future();
 

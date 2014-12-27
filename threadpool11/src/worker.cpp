@@ -23,40 +23,41 @@ This file is part of threadpool11.
 
 namespace threadpool11 {
 
-Worker::Worker(Pool* const& pool) : thread(std::bind(&Worker::execute, this, pool)) {
+Worker::Worker(Pool& pool)
+    : thread(std::bind(&Worker::execute, this, std::ref(pool))) {
   // std::cout << std::this_thread::get_id() << " Worker created" << std::endl;
   thread.detach();
 }
 
-void Worker::execute(Pool* const& pool) {
+void Worker::execute(Pool& pool) {
   const std::unique_ptr<Worker> self(this); //! auto de-allocation when thread is terminated
 
   while (true) {
     Work::Callable* work_;
     // std::cout << "\tThread " << std::this_thread::get_id() << " awaken." << std::endl;
-    while (pool->m_workQueue.pop(work_)) {
+    while (pool.m_workQueue.pop(work_)) {
       const std::unique_ptr<Work::Callable> work(work_);
-      --pool->m_workQueueSize;
-      ++pool->m_activeWorkerCount;
+      --pool.m_workQueueSize;
+      ++pool.m_activeWorkerCount;
       // std::cout << "\tThread " << std::this_thread::get_id() << " worked." << std::endl;
       if ((*work)() == Work::Type::TERMINAL) {
-        --pool->m_activeWorkerCount;
-        --pool->m_workerCount;
+        --pool.m_activeWorkerCount;
+        --pool.m_workerCount;
         return;
       }
 
-      --pool->m_activeWorkerCount;
+      --pool.m_activeWorkerCount;
     }
 
-    if (pool->m_activeWorkerCount == 0) {
-      std::unique_lock<std::mutex> notifyAllFinishedLock(pool->notify_all_finished_signal_mtx);
-      pool->m_areAllReallyFinished = true;
-      pool->m_notifyAllFinishedSignal.notify_all();
+    if (pool.m_activeWorkerCount == 0) {
+      std::unique_lock<std::mutex> notifyAllFinishedLock(pool.notify_all_finished_signal_mtx);
+      pool.m_areAllReallyFinished = true;
+      pool.m_notifyAllFinishedSignal.notify_all();
     }
 
     // std::cout << "\tThread " << std::this_thread::get_id() << " will sleep." << std::endl;
-    std::unique_lock<std::mutex> workSignalLock(pool->m_workSignalMutex);
-    pool->m_workSignal.wait(workSignalLock, [&pool]() { return (pool->m_workQueueSize.load()); });
+    std::unique_lock<std::mutex> workSignalLock(pool.m_workSignalMutex);
+    pool.m_workSignal.wait(workSignalLock, [&pool]() { return (pool.m_workQueueSize.load()); });
   }
 }
 }
