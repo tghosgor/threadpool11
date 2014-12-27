@@ -1,5 +1,5 @@
 ﻿/*!
-Copyright (c) 2013, 2014, Tolga HOŞGÖR
+Copyright (c) 2013, 2014, 2015 Tolga HOŞGÖR
 All rights reserved.
 
 This file is part of threadpool11.
@@ -20,78 +20,38 @@ This file is part of threadpool11.
 
 #pragma once
 
-#include <iostream>
+#include "worker.hpp"
+#include "helper.hpp"
 
-#include <cassert>
+#include <boost/lockfree/queue.hpp>
 
 #include <atomic>
+#include <cassert>
 #include <condition_variable>
-#include <deque>
 #include <future>
 #include <memory>
 #include <mutex>
 
-#include <boost/lockfree/queue.hpp>
-
-#include "threadpool11/Worker.h"
-#include "threadpool11/Helper.hpp"
-
 #if defined(WIN32) && defined(threadpool11_DLL)
-  #ifdef threadpool11_EXPORTING
-    #define threadpool11_EXPORT __declspec(dllexport)
-  #else
-    #define threadpool11_EXPORT __declspec(dllimport)
-  #endif
+#ifdef threadpool11_EXPORTING
+#define threadpool11_EXPORT __declspec(dllexport)
 #else
-  #define threadpool11_EXPORT
+#define threadpool11_EXPORT __declspec(dllimport)
+#endif
+#else
+#define threadpool11_EXPORT
 #endif
 
-namespace threadpool11
-{
+namespace threadpool11 {
 
-class Pool
-{
-friend class Worker;
+class Pool {
+  friend class Worker;
 
 public:
-  enum class Method
-  {
-    SYNC,
-    ASYNC
-  };
-
-private:
-  Pool(Pool&&);
-  Pool(Pool const&);
-  Pool& operator=(Pool&&);
-  Pool& operator=(Pool const&);
-
-  std::atomic<size_t> worker_count;
-  std::atomic<size_t> active_worker_count;
-  
-  
-  mutable std::mutex notify_all_finished_signal_mtx;
-  std::condition_variable notify_all_finished_signal;
-  bool are_all_really_finished;
-
-  mutable std::mutex work_signal_mtx;
-  //bool work_signal_prot; //! wake up protection // <- work_queue_size is used instead of this
-  std::condition_variable work_signal;
-
-  boost::lockfree::queue<Work::Callable*> work_queue;
-  std::atomic<size_t> work_queue_size;
-
-  void spawnWorkers(size_t n);
-
-  /*!
-   * \brief executor
-   * This is run by different threads to do necessary operations for queue processing.
-   */
-  void executor(std::unique_ptr<std::thread> self);
+  enum class Method { SYNC, ASYNC };
 
 public:
-  threadpool11_EXPORT
-  Pool(size_t const& worker_count = std::thread::hardware_concurrency());
+  threadpool11_EXPORT Pool(size_t const& m_workerCount = std::thread::hardware_concurrency());
   ~Pool();
 
   /*!
@@ -103,17 +63,16 @@ public:
    *
    * Properties: thread-safe.
    */
-  template<typename T>
-  threadpool11_EXPORT
-  std::future<T> postWork(std::function<T()> callable, Work::Type const type = Work::Type::STD);
-  //TODO: convert 'type' above to const& when MSVC fixes that bug.
-  
+  template <typename T>
+  threadpool11_EXPORT std::future<T> postWork(std::function<T()> callable,
+                                              Work::Type const type = Work::Type::STD);
+  // TODO: convert 'type' above to const& when MSVC fixes that bug.
+
   /**
    * This function suspends the calling thread until all posted works are finished and, therefore, all worker
    * threads are free. It guarantees you that before the function returns, all queued works are finished.
    */
-  threadpool11_EXPORT
-  void waitAll();
+  threadpool11_EXPORT void waitAll();
 
   /*!
    * This function joins all the threads in the thread pool as fast as possible.
@@ -125,8 +84,7 @@ public:
    *
    * Properties: NOT thread-safe.
    */
-  threadpool11_EXPORT
-  void joinAll();
+  threadpool11_EXPORT void joinAll();
 
   /*!
    * \brief Pool::getWorkerCount
@@ -135,8 +93,7 @@ public:
    *
    * \return The number of worker threads.
    */
-  threadpool11_EXPORT
-  size_t getWorkerCount() const;
+  threadpool11_EXPORT size_t getWorkerCount() const;
 
   /*!
    * \brief setWorkerCount
@@ -153,8 +110,7 @@ public:
    *  There still may be a few milliseconds delay before value returned by Pool::getWorkerCount is updated.
    *  But it will be more accurate compared to ASYNC one.
    */
-  threadpool11_EXPORT
-  void setWorkerCount(size_t const& n, Method const& method = Method::ASYNC);
+  threadpool11_EXPORT void setWorkerCount(size_t const& n, Method const& method = Method::ASYNC);
 
   /*!
    * \brief getWorkQueueSize
@@ -163,28 +119,26 @@ public:
    *
    * \return The number of work items that has not been acquired by workers.
    */
-  threadpool11_EXPORT
-  size_t getWorkQueueSize() const;
-  
+  threadpool11_EXPORT size_t getWorkQueueSize() const;
+
   /**
-   * This function requires a mutex lock so you should call it wisely if you performance is a life matter to you.
+   * This function requires a mutex lock so you should call it wisely if you performance is a life matter to
+   * you.
    */
-  threadpool11_EXPORT
-  size_t getActiveWorkerCount() const;
-  
+  threadpool11_EXPORT size_t getActiveWorkerCount() const;
+
   /**
-   * This function requires a mutex lock so you should call it wisely if you performance is a life matter to you.
+   * This function requires a mutex lock so you should call it wisely if you performance is a life matter to
+   * you.
    */
-  threadpool11_EXPORT
-  size_t getInactiveWorkerCount() const;
+  threadpool11_EXPORT size_t getInactiveWorkerCount() const;
 
   /*!
    * Increases the number of threads in the pool by n.
    *
    * Properties: thread-safe.
    */
-  threadpool11_EXPORT
-  void incWorkerCountBy(size_t const& n);
+  threadpool11_EXPORT void incWorkerCountBy(size_t const& n);
 
   /*!
    * Tries to decrease the number of threads in the pool by n.
@@ -204,14 +158,41 @@ public:
    *
    * Properties: thread-safe.
    */
-  threadpool11_EXPORT
-  void decWorkerCountBy(size_t n = std::numeric_limits<size_t>::max(), Method const& method = Method::ASYNC);
+  threadpool11_EXPORT void decWorkerCountBy(size_t n = std::numeric_limits<size_t>::max(),
+                                            Method const& method = Method::ASYNC);
+
+private:
+  Pool(Pool&&) = delete;
+  Pool(Pool const&) = delete;
+  Pool& operator=(Pool&&) = delete;
+  Pool& operator=(Pool const&) = delete;
+
+  void spawnWorkers(size_t n);
+
+  /*!
+   * \brief executor
+   * This is run by different threads to do necessary operations for queue processing.
+   */
+  void executor(std::unique_ptr<std::thread> self);
+
+private:
+  std::atomic<size_t> m_workerCount;
+  std::atomic<size_t> m_activeWorkerCount;
+
+  mutable std::mutex notify_all_finished_signal_mtx;
+  std::condition_variable m_notifyAllFinishedSignal;
+  bool m_areAllReallyFinished;
+
+  mutable std::mutex m_workSignalMutex;
+  // bool work_signal_prot; //! wake up protection // <- work_queue_size is used instead of this
+  std::condition_variable m_workSignal;
+
+  boost::lockfree::queue<Work::Callable*> m_workQueue;
+  std::atomic<size_t> m_workQueueSize;
 };
 
-template<typename T>
-threadpool11_EXPORT
-inline std::future<T> Pool::postWork(std::function<T()> callable, Work::Type const type)
-{
+template <typename T>
+threadpool11_EXPORT inline std::future<T> Pool::postWork(std::function<T()> callable, Work::Type const type) {
   std::promise<T> promise;
   auto future = promise.get_future();
 
@@ -221,21 +202,20 @@ inline std::future<T> Pool::postWork(std::function<T()> callable, Work::Type con
   /* evil move hack */
   auto move_promise = make_move_on_copy(std::move(promise));
 
-  std::unique_lock<std::mutex> workSignalLock(work_signal_mtx);
-  ++work_queue_size;
-  work_queue.push(new Work::Callable([move_callable, move_promise, type]() mutable {
-    move_promise.Value().set_value( (move_callable.Value()) () );
+  std::unique_lock<std::mutex> workSignalLock(m_workSignalMutex);
+  ++m_workQueueSize;
+  m_workQueue.push(new Work::Callable([move_callable, move_promise, type]() mutable {
+    move_promise.Value().set_value((move_callable.Value())());
     return type;
   }));
-  work_signal.notify_one();
+  m_workSignal.notify_one();
 
   return future;
 }
 
-template<>
-threadpool11_EXPORT
-inline std::future<void> Pool::postWork(std::function<void()> callable, Work::Type const type)
-{
+template <>
+threadpool11_EXPORT inline std::future<void> Pool::postWork(std::function<void()> callable,
+                                                            Work::Type const type) {
   std::promise<void> promise;
   auto future = promise.get_future();
 
@@ -244,14 +224,14 @@ inline std::future<void> Pool::postWork(std::function<void()> callable, Work::Ty
   /* evil move hack */
   auto move_promise = make_move_on_copy(std::move(promise));
 
-  std::unique_lock<std::mutex> workSignalLock(work_signal_mtx);
-  ++work_queue_size;
-  work_queue.push(new Work::Callable([move_callable, move_promise, type]() mutable {
-    (move_callable.Value()) ();
+  std::unique_lock<std::mutex> workSignalLock(m_workSignalMutex);
+  ++m_workQueueSize;
+  m_workQueue.push(new Work::Callable([move_callable, move_promise, type]() mutable {
+    (move_callable.Value())();
     move_promise.Value().set_value();
     return type;
   }));
-  work_signal.notify_one();
+  m_workSignal.notify_one();
 
   return future;
 }

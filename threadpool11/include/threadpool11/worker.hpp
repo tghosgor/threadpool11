@@ -1,5 +1,5 @@
 /*!
-Copyright (c) 2013, 2014, Tolga HOŞGÖR
+Copyright (c) 2013, 2014, 2015 Tolga HOŞGÖR
 All rights reserved.
 
 This file is part of threadpool11.
@@ -20,7 +20,7 @@ This file is part of threadpool11.
 
 #pragma once
 
-//#include <iostream>
+#include "helper.hpp"
 
 #include <condition_variable>
 #include <functional>
@@ -28,16 +28,16 @@ This file is part of threadpool11.
 #include <mutex>
 #include <thread>
 
-#include "threadpool11/Helper.hpp"
-
-namespace threadpool11
-{
+namespace threadpool11 {
 
 class Pool;
 
-class Worker
-{
+class Worker {
   friend class Pool;
+
+public:
+  Worker(Pool* const& pool);
+  ~Worker() = default;
 
 private:
   Worker(Worker&&) = delete;
@@ -45,20 +45,14 @@ private:
   Worker& operator=(Worker&&) = delete;
   Worker& operator=(Worker const&) = delete;
 
+  void execute(Pool* const& pool);
+
+private:
   /*!
   * This should always stay at bottom so that it is called at the most end.
   */
   std::thread thread;
 
-public:
-  Worker(Pool* const& pool);
-  ~Worker()
-  {
-    //std::cout << "Worker destructed." << std::endl;
-  }
-
 private:
-  void execute(Pool* const& pool);
 };
-
 }
