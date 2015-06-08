@@ -62,11 +62,11 @@ public:
   enum class Method { SYNC, ASYNC };
 
 public:
-  threadpool11_EXPORT Pool(std::size_t m_workerCount = std::thread::hardware_concurrency());
+  threadpool11_EXPORT Pool(std::size_t worker_count = std::thread::hardware_concurrency());
   ~Pool();
 
   /*!
-   * Posts a work to the pool for getting processed.
+   * \brief postWork Posts a work to the pool for getting processed.
    *
    * If there are no threads left (i.e. you called Pool::joinAll(); prior to
    * this function) all the works you post gets enqueued. If you spawn new threads in
@@ -79,12 +79,16 @@ public:
   // TODO: convert 'type' above to const& when MSVC fixes that bug.
 
   /**
+   * \brief waitAll Blocks the calling thread until all posted works are finished.
+   *
    * This function suspends the calling thread until all posted works are finished and, therefore, all worker
    * threads are free. It guarantees you that before the function returns, all queued works are finished.
    */
   threadpool11_EXPORT void waitAll();
 
   /*!
+   * \brief joinAll Joins the worker threads.
+   *
    * This function joins all the threads in the thread pool as fast as possible.
    * All the posted works are NOT GUARANTEED to be finished before the worker threads
    * are destroyed and this function returns.
@@ -97,7 +101,7 @@ public:
   threadpool11_EXPORT void joinAll();
 
   /*!
-   * \brief Pool::getWorkerCount
+   * \brief getWorkerCount
    *
    * Properties: thread-safe.
    *
@@ -131,27 +135,36 @@ public:
    */
   threadpool11_EXPORT size_t getWorkQueueSize() const;
 
-  /**
-   * This function requires a mutex lock so you should call it wisely if you performance is a life matter to
-   * you.
-   */
+  /*!
+    * \brief getActiveWorkerCount Gets the number of active workers when the function is called.
+    *
+    * The information this function returns does not really mean much. The worker may be starting to execute a work from queue,
+    * it may be executing a work or it may have just executed a work.
+    *
+    * \return The number of active workers.
+    */
   threadpool11_EXPORT size_t getActiveWorkerCount() const;
 
   /**
-   * This function requires a mutex lock so you should call it wisely if you performance is a life matter to
-   * you.
+   * \brief getInactiveWorkerCount Gets the number of the inactive worker count.
+   *
+    * The information this function returns does not really mean much. The worker may be starting to execute a work from queue,
+    * it may be executing a work or it may have just executed a work.
+    *
+    * \return The number of active workers.
    */
   threadpool11_EXPORT size_t getInactiveWorkerCount() const;
 
   /*!
-   * Increases the number of threads in the pool by n.
+   * \brief incWorkerCountBy Increases the number of threads in the pool by n.
    *
    * Properties: thread-safe.
    */
   threadpool11_EXPORT void incWorkerCountBy(std::size_t n);
 
   /*!
-   * Tries to decrease the number of threads in the pool by n.
+   * \brief decWorkerCountBy Tries to decrease the number of threads in the pool by n.
+   *
    * Setting 'n' higher than the number of workers has no effect.
    * Calling without arguments asynchronously terminates all workers.
    *
@@ -192,22 +205,22 @@ private:
   void push(Work::Callable* workFunc);
 
 private:
-  std::atomic<size_t> m_workerCount;
-  std::atomic<size_t> m_activeWorkerCount;
+  std::atomic<size_t> worker_count_;
+  std::atomic<size_t> active_worker_count_;
 
-  mutable std::mutex notify_all_finished_signal_mtx;
-  std::condition_variable m_notifyAllFinishedSignal;
-  bool m_areAllReallyFinished;
+  mutable std::mutex notify_all_finished_mutex_;
+  std::condition_variable notify_all_finished_signal_;
+  std::atomic<bool> are_all_really_finished_;
 
-  mutable std::mutex m_workSignalMutex;
+  mutable std::mutex work_signal_mutex_;
   // bool work_signal_prot; //! wake up protection // <- work_queue_size is used instead of this
-  std::condition_variable m_workSignal;
+  std::condition_variable work_signal_;
 
   std::unique_ptr<
       boost::lockfree::
           queue<Work::Callable*, boost::parameter::void_, boost::parameter::void_, boost::parameter::void_>>
-      m_workQueue;
-  std::atomic<size_t> m_workQueueSize;
+      work_queue_;
+  std::atomic<size_t> work_queue_size_;
 };
 
 template <typename T>
@@ -222,7 +235,7 @@ threadpool11_EXPORT inline std::future<T> Pool::postWork(std::function<T()> call
   auto move_promise = make_move_on_copy(std::move(promise));
 
   auto workFunc = new Work::Callable([move_callable, move_promise, type]() mutable {
-    move_promise.Value().set_value((move_callable.Value())());
+    move_promise.value().set_value((move_callable.value())());
     return type;
   });
 
@@ -243,8 +256,8 @@ threadpool11_EXPORT inline std::future<void> Pool::postWork(std::function<void()
   auto move_promise = make_move_on_copy(std::move(promise));
 
   auto workFunc = new Work::Callable([move_callable, move_promise, type]() mutable {
-    (move_callable.Value())();
-    move_promise.Value().set_value();
+    (move_callable.value())();
+    move_promise.value().set_value();
     return type;
   });
 

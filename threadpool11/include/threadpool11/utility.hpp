@@ -35,18 +35,18 @@ template <typename T>
 class move_on_copy {
 public:
   move_on_copy(T&& aValue)
-      : value(std::move(aValue)) {}
+      : value_(std::move(aValue)) {}
   move_on_copy(const move_on_copy& other)
-      : value(std::move(other.value)) {}
+      : value_(std::move(other.value_)) {}
 
   move_on_copy& operator=(move_on_copy&& aValue) = delete;      // not needed here
   move_on_copy& operator=(const move_on_copy& aValue) = delete; // not needed here
 
-  T& Value() { return value; }
-  const T& Value() const { return value; }
+  T& value() { return value_; }
+  const T& value() const { return value_; }
 
 private:
-  mutable T value;
+  mutable T value_;
 };
 
 template <typename T>

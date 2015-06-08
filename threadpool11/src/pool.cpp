@@ -27,26 +27,25 @@ This file is part of threadpool11.
 namespace threadpool11 {
 
 Pool::Pool(std::size_t worker_count)
-    : m_workerCount(0)
-    , m_activeWorkerCount(0)
-    , m_workQueue(new boost::lockfree::queue<Work::Callable*>(0))
-    , m_workQueueSize(0) {
+    : worker_count_(0)
+    , active_worker_count_(0)
+    , are_all_really_finished_{true}
+    , work_queue_(new boost::lockfree::queue<Work::Callable*>(0))
+    , work_queue_size_(0) {
   spawnWorkers(worker_count);
 }
 
 Pool::~Pool() { joinAll(); }
 
 void Pool::waitAll() {
-  std::unique_lock<std::mutex> lock(notify_all_finished_signal_mtx);
-  if (m_activeWorkerCount > 0) {
-    m_notifyAllFinishedSignal.wait(lock, [this]() { return m_areAllReallyFinished; });
-    m_areAllReallyFinished = false;
-  }
+  std::unique_lock<std::mutex> notify_all_finished_lock(notify_all_finished_mutex_);
+
+  notify_all_finished_signal_.wait(notify_all_finished_lock, [this]() { return are_all_really_finished_.load(); });
 }
 
 void Pool::joinAll() { decWorkerCountBy(std::numeric_limits<size_t>::max(), Method::SYNC); }
 
-size_t Pool::getWorkerCount() const { return m_workerCount.load(); }
+size_t Pool::getWorkerCount() const { return worker_count_.load(); }
 
 void Pool::setWorkerCount(std::size_t n, Method method) {
   if (getWorkerCount() < n)
@@ -55,11 +54,11 @@ void Pool::setWorkerCount(std::size_t n, Method method) {
     decWorkerCountBy(getWorkerCount() - n, method);
 }
 
-size_t Pool::getWorkQueueSize() const { return m_workQueueSize.load(); }
+size_t Pool::getWorkQueueSize() const { return work_queue_size_.load(); }
 
-size_t Pool::getActiveWorkerCount() const { return m_activeWorkerCount.load(); }
+size_t Pool::getActiveWorkerCount() const { return active_worker_count_.load(); }
 
-size_t Pool::getInactiveWorkerCount() const { return m_workerCount.load() - m_activeWorkerCount.load(); }
+size_t Pool::getInactiveWorkerCount() const { return worker_count_.load() - active_worker_count_.load(); }
 
 void Pool::incWorkerCountBy(std::size_t n) { spawnWorkers(n); }
 
@@ -80,18 +79,20 @@ void Pool::decWorkerCountBy(size_t n, Method method) {
 
 void Pool::spawnWorkers(std::size_t n) {
   //'OR' makes sure the case where one of the expressions is zero, is valid.
-  assert(static_cast<size_t>(m_workerCount + n) > n ||
-         static_cast<size_t>(m_workerCount + n) > m_workerCount);
+  assert(static_cast<size_t>(worker_count_ + n) > n ||
+         static_cast<size_t>(worker_count_ + n) > worker_count_);
   while (n-- > 0) {
     new Worker(*this); //! Worker class takes care of its de-allocation itself after here
-    ++m_workerCount;
+    ++worker_count_;
   }
 }
 
 void Pool::push(Work::Callable* workFunc) {
-  std::unique_lock<std::mutex> workSignalLock(m_workSignalMutex);
-  ++m_workQueueSize;
-  m_workQueue->push(workFunc);
-  m_workSignal.notify_one();
+  are_all_really_finished_ = false;
+
+  std::unique_lock<std::mutex> work_signal_lock(work_signal_mutex_);
+  ++work_queue_size_;
+  work_queue_->push(workFunc);
+  work_signal_.notify_one();
 }
 }

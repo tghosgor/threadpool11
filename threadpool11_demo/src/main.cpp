@@ -49,6 +49,18 @@ void test3Func() {
   ++test3Var;
 }
 
+std::size_t factorial(std::size_t i) {
+  i = std::max(1ul, i);
+
+  std::size_t res = i;
+
+  while (i > 2) {
+    res *= --i;
+  }
+
+  return res;
+}
+
 } // NS
 
 int main(int argc, char* argv[]) {
@@ -193,6 +205,35 @@ int main(int argc, char* argv[]) {
     }
     auto end = std::chrono::high_resolution_clock::now();
     std::cout << "Demo 4 took " << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count()
+              << " milliseconds." << std::endl << std::endl;
+  }
+  
+  /**
+   * Demo #5
+   * For performance test purposes.
+   */
+   
+  const constexpr auto iter = 100ul;
+  std::array<std::size_t, iter> a;
+
+  {
+    pool.setWorkerCount(std::thread::hardware_concurrency());
+    
+    std::array<std::future<std::size_t>, iter> futures;
+
+    const auto begin = std::chrono::high_resolution_clock::now();
+
+    for (auto i = 0u; i < iter; ++i) {
+      futures[i] = pool.postWork<std::size_t>([i]() { return factorial(i); });
+    }
+
+    for (auto i = 0u; i < iter; ++i) {
+      a[i] = futures[i].get();
+    }
+
+    const auto end = std::chrono::high_resolution_clock::now();
+    std::cout << "threadpool11 execution took "
+              << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count()
               << " milliseconds." << std::endl << std::endl;
   }
 
