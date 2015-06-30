@@ -213,7 +213,7 @@ int main(int argc, char* argv[]) {
    * For performance test purposes.
    */
    
-  const constexpr auto iter = 100ul;
+  const constexpr auto iter = 300000ul;
   std::array<std::size_t, iter> a;
 
   {
@@ -232,7 +232,7 @@ int main(int argc, char* argv[]) {
     }
 
     const auto end = std::chrono::high_resolution_clock::now();
-    std::cout << "threadpool11 execution took "
+    std::cout << "Demo 5 took "
               << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count()
               << " milliseconds." << std::endl << std::endl;
   }

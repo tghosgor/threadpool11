@@ -56,7 +56,7 @@ void Worker::execute(Pool& pool) {
 
     // as far as I can see when there is a work, it is certain that either work_queue_size or active_worker counter
     // is greater than zero so I don't see any race condition
-    if (pool.work_queue_size_ == 0 && --pool.active_worker_count_ == 0) {
+    if (--pool.active_worker_count_ == 0 && pool.work_queue_size_ == 0) {
       std::unique_lock<std::mutex> notify_all_finished_lock(pool.notify_all_finished_mutex_);
 
       pool.are_all_really_finished_ = true;

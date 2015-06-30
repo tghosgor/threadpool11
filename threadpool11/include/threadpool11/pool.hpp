@@ -168,7 +168,7 @@ public:
    * Setting 'n' higher than the number of workers has no effect.
    * Calling without arguments asynchronously terminates all workers.
    *
-   * WARNING: This function behaves different based on second parameter.
+   * \warning This function behaves different based on second parameter.
    *
    * Method::ASYNC: It will return before the threads are joined. It will just post
    *  'n' requests for termination. This means that if you call this function multiple times,
