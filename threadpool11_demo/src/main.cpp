@@ -22,10 +22,12 @@ This file is part of threadpool11.
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <cstdio>
 #include <iostream>
 #include <mutex>
 #include <thread>
+#include <vector>
 
 namespace {
 
