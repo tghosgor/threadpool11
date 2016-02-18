@@ -20,6 +20,7 @@ This file is part of threadpool11.
 
 #include "threadpool11/threadpool11.hpp"
 
+#include <array>
 #include <iostream>
 
 std::size_t factorial(std::size_t i) {

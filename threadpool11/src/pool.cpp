@@ -23,6 +23,7 @@ This file is part of threadpool11.
 #include <boost/lockfree/queue.hpp>
 
 #include <algorithm>
+#include <vector>
 
 namespace threadpool11 {
 
