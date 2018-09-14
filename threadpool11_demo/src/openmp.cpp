@@ -77,5 +77,21 @@ int main(int argc, char* argv[]) {
               << " milliseconds." << std::endl << std::endl;
   }
 
+  {
+    std::array<volatile std::size_t, iter> a;
+
+    const auto begin = std::chrono::high_resolution_clock::now();
+
+#pragma omp parallel for schedule(dynamic, 1)
+    for (auto i = 0u; i < iter; ++i) {
+      a[i] = factorial(i);
+    }
+
+    const auto end = std::chrono::high_resolution_clock::now();
+    std::cout << "openmp execution (dynamic schedule) took "
+              << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count()
+              << " milliseconds." << std::endl << std::endl;
+  }
+
   return 0;
 }

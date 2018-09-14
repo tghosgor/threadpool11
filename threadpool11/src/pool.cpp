@@ -22,6 +22,8 @@
 #include <boost/lockfree/queue.hpp>
 
 #include <algorithm>
+#include <future>
+#include <vector>
 
 namespace threadpool11 {
 

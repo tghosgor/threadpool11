@@ -22,9 +22,12 @@
 #include <algorithm>
 #include <array>
 #include <cstdio>
+#include <cmath>
+#include <future>
 #include <iostream>
 #include <mutex>
 #include <thread>
+#include <vector>
 
 namespace {
 
@@ -195,7 +198,7 @@ int main(int argc, char* argv[]) {
       futures[i] = pool.postWork<float>([=]() {
         std::cout << "\tExecuted pow(" << i << ", 2) by thread id " << std::this_thread::get_id()
                   << std::endl;
-        return pow(i, 2);
+        return std::pow(i, 2);
       });
     }
 
