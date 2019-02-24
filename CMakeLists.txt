@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 2.8)
 project(threadpool11)
 
+enable_testing()
+
 set(CMAKE_VERBOSE_MAKEFILE on)
 
 # SET a default build type if none was specified
@@ -12,11 +14,7 @@ endif()
 
 find_package(Boost)
 
-if(Boost_FOUND)
-  include_directories(${Boost_INCLUDE_DIR})
-else()
-  include_directories("ext/include")
-endif()
+include_directories(${Boost_INCLUDE_DIR})
 
 set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Release" "Debug" "Perf")
 

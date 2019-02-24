@@ -1,6 +1,6 @@
-﻿/*!
+﻿/**
  * threadpool11
- * Copyright (C) 2013, 2014, 2015, 2016, 2017, 2028  Tolga HOSGOR
+ * Copyright (C) 2013, 2014, 2015, 2016, 2017, 2018, 2019  Tolga HOSGOR
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -19,12 +19,14 @@
 
 #pragma once
 
-#include "worker.hpp"
-#include "utility.hpp"
+#include "work.hpp"
+
+#include <boost/lockfree/queue.hpp>
 
 #include <atomic>
 #include <cassert>
 #include <condition_variable>
+#include <functional>
 #include <future>
 #include <memory>
 #include <mutex>
@@ -39,54 +41,54 @@
 #define threadpool11_EXPORT
 #endif
 
-namespace boost {
-namespace parameter {
-struct void_;
-}
-namespace lockfree {
-template <typename T,
-          class A0,
-          class A1,
-          class A2>
-class queue;
-}
-}
-
 namespace threadpool11 {
 
-class Pool {
-  friend class Worker;
+class pool {
+public:
+  enum class method_t {
+    SYNC,
+    ASYNC,
+  };
+
+  template <class T>
+  using callable_t = std::function<T()>;
+
+  using size_type = std::size_t;
+
+private:
+  using work_t = work;
+  using queue_t = boost::lockfree::queue<work_t*>;
+  struct no_future_t { };
 
 public:
-  enum class Method { SYNC, ASYNC };
+  threadpool11_EXPORT pool(size_type worker_count = std::thread::hardware_concurrency());
 
-public:
-  threadpool11_EXPORT Pool(std::size_t worker_count = std::thread::hardware_concurrency());
-  ~Pool();
-
-  /*!
-   * \brief postWork Posts a work to the pool for getting processed.
-   *
-   * If there are no threads left (i.e. you called Pool::joinAll(); prior to
-   * this function) all the works you post gets enqueued. If you spawn new threads in
-   * future, they will be executed then.
-   *
-   * Properties: thread-safe.
-   */
-  template <typename T>
-  threadpool11_EXPORT std::future<T> postWork(std::function<T()> callable, Work::Type type = Work::Type::STD);
-  // TODO: convert 'type' above to const& when MSVC fixes that bug.
+  ~pool();
 
   /**
-   * \brief waitAll Blocks the calling thread until all posted works are finished.
+   * \brief Posts a work to the pool for getting processed.
    *
-   * This function suspends the calling thread until all posted works are finished and, therefore, all worker
-   * threads are free. It guarantees you that before the function returns, all queued works are finished.
+   * if there are no threads left (i.e. you called pool::join_all(); prior to
+   * this function) all the works you post gets enqueued. if you spawn new threads in
+   * the future, they will be executed then.
+   *
+   * properties: thread-safe.
    */
-  threadpool11_EXPORT void waitAll();
+  template <class T>
+  threadpool11_EXPORT std::future<T> post_work(callable_t<T> callable) {
+    return post_work(work_t::type_t::STANDARD, std::move(callable));
+  }
 
-  /*!
-   * \brief joinAll Joins the worker threads.
+  /**
+   * Same as post_work(callable_t<T>, worker_t::type_t) except does not have the overhead of futures.
+   */
+  template <class T>
+  threadpool11_EXPORT void post_work(callable_t<T> callable, no_future_t) {
+    return post_work(work_t::type_t::STANDARD, std::move(callable), no_future_tag);
+  }
+
+  /**
+   * \brief join_all Joins the worker threads.
    *
    * This function joins all the threads in the thread pool as fast as possible.
    * All the posted works are NOT GUARANTEED to be finished before the worker threads
@@ -97,172 +99,179 @@ public:
    *
    * Properties: NOT thread-safe.
    */
-  threadpool11_EXPORT void joinAll();
+  threadpool11_EXPORT void join_all();
 
-  /*!
-   * \brief getWorkerCount
-   *
-   * Properties: thread-safe.
+  /**
+   * \brief get_worker_count
    *
    * \return The number of worker threads.
+   *
+   * Properties: NOT thread-safe.
    */
-  threadpool11_EXPORT size_t getWorkerCount() const;
+  threadpool11_EXPORT size_type get_worker_count() const { return worker_count_; }
 
-  /*!
-   * \brief setWorkerCount
-   * \param n
+  /**
+   * \brief set_worker_count
+   * \param n The number to set worker count to.
+   * \param method The method to use for when the thread count is being decreased.
    *
-   * WARNING: This function behaves different based on second parameter. (Only if decreasing)
-   *
-   * Method::ASYNC: It will return before the threads are joined. It will just post
+   * method_t::ASYNC: It will return before the threads are joined. It will just post
    *  'n' requests for termination. This means that if you call this function multiple times,
    *  worker termination requests will pile up. It can even kill the newly
    *  created workers if all workers are removed before all requests are processed.
    *
-   * Method::SYNC: It won't return until the specified number of workers are actually destroyed.
-   *  There still may be a few milliseconds delay before value returned by Pool::getWorkerCount is updated.
+   * method_t::SYNC: It won't return until the specified number of workers are actually destroyed.
+   *  There still may be a few milliseconds delay before value returned by pool::get_worker_count is updated.
    *  But it will be more accurate compared to ASYNC one.
-   */
-  threadpool11_EXPORT void setWorkerCount(std::size_t n, Method method = Method::ASYNC);
-
-  /*!
-   * \brief getWorkQueueSize
    *
-   * Properties: thread-safe.
-   *
-   * \return The number of work items that has not been acquired by workers.
+   * Properties: NOT thread-safe.
    */
-  threadpool11_EXPORT size_t getWorkQueueSize() const;
-
-  /*!
-    * \brief getActiveWorkerCount Gets the number of active workers when the function is called.
-    *
-    * The information this function returns does not really mean much. The worker may be starting to execute a work from queue,
-    * it may be executing a work or it may have just executed a work.
-    *
-    * \return The number of active workers.
-    */
-  threadpool11_EXPORT size_t getActiveWorkerCount() const;
+  threadpool11_EXPORT void set_worker_count(size_type n, method_t method = method_t::ASYNC);
 
   /**
-   * \brief getInactiveWorkerCount Gets the number of the inactive worker count.
+   * \brief get_work_queue_size
    *
-    * The information this function returns does not really mean much. The worker may be starting to execute a work from queue,
-    * it may be executing a work or it may have just executed a work.
-    *
-    * \return The number of active workers.
-   */
-  threadpool11_EXPORT size_t getInactiveWorkerCount() const;
-
-  /*!
-   * \brief incWorkerCountBy Increases the number of threads in the pool by n.
+   * \return The number of work items that has not been acquired by workers.
    *
    * Properties: thread-safe.
    */
-  threadpool11_EXPORT void incWorkerCountBy(std::size_t n);
+  threadpool11_EXPORT size_type get_work_queue_size() const { return work_queue_size_.load(std::memory_order_relaxed); }
 
-  /*!
-   * \brief decWorkerCountBy Tries to decrease the number of threads in the pool by n.
+  /**
+   * \brief increase_worker_count Increases the number of threads in the pool by n.
+   *
+   * Properties: NOT thread-safe.
+   */
+  threadpool11_EXPORT void increase_worker_count(size_type n);
+
+  /**
+   * \brief decrease_worker_count Tries to decrease the number of threads in the pool by n.
    *
    * Setting 'n' higher than the number of workers has no effect.
    * Calling without arguments asynchronously terminates all workers.
    *
    * \warning This function behaves different based on second parameter.
    *
-   * Method::ASYNC: It will return before the threads are joined. It will just post
+   * method_t::ASYNC: It will return before the threads are joined. It will just post
    *  'n' requests for termination. This means that if you call this function multiple times,
    *  worker termination requests will pile up. It can even kill the newly
    *  created workers if all workers are removed before all requests are processed.
    *
-   * Method::SYNC: It won't return until the specified number of workers are actually destroyed.
-   *  There still may be a few milliseconds delay before value returned by Pool::getWorkerCount is updated.
+   * method_t::SYNC: It won't return until the specified number of workers are actually destroyed.
+   *  There still may be a few milliseconds delay before value returned by pool::get_worker_count is updated.
    *  But it will be more accurate compared to ASYNC one.
    *
-   * Properties: thread-safe.
+   * Properties: NOT thread-safe.
    */
-  threadpool11_EXPORT void decWorkerCountBy(std::size_t n = std::numeric_limits<size_t>::max(),
-                                            Method method = Method::ASYNC);
+  threadpool11_EXPORT void decrease_worker_count(size_type n = std::numeric_limits<size_type>::max(),
+                                                 method_t method = method_t::ASYNC);
 
 private:
-  Pool(Pool&&) = delete;
-  Pool(Pool const&) = delete;
-  Pool& operator=(Pool&&) = delete;
-  Pool& operator=(Pool const&) = delete;
+  pool(pool&&) = delete;
+  pool(pool const&) = delete;
+  pool& operator=(pool&&) = delete;
+  pool& operator=(pool const&) = delete;
 
-  void spawnWorkers(std::size_t n);
+  template <class T>
+  threadpool11_EXPORT std::future<T> post_work(work_t::type_t type, callable_t<T> callable);
 
-  /*!
-   * \brief executor
-   * This is run by different threads to do necessary operations for queue processing.
-   */
-  void executor(std::unique_ptr<std::thread> self);
+  template <class T>
+  threadpool11_EXPORT void post_work(work_t::type_t type, callable_t<T> callable, no_future_t);
 
-  /**
-   * @brief push Internal usage.
-   * @param workFunc
-   */
-  void push(Work::Callable* workFunc);
+  template <class T>
+  static void call_helper(callable_t<T> callable, std::shared_ptr<std::promise<T>> promise);
+
+  template <class T>
+  static void call_helper(callable_t<T> callable);
+
+  void push(std::unique_ptr<work_t> work);
+
+  void worker_main();
+
+public:
+  static const no_future_t no_future_tag;
 
 private:
-  std::atomic<size_t> worker_count_;
-  std::atomic<size_t> active_worker_count_;
-
-  mutable std::mutex notify_all_finished_mutex_;
-  std::condition_variable notify_all_finished_signal_;
-  std::atomic<bool> are_all_really_finished_;
+  size_type worker_count_;
 
   mutable std::mutex work_signal_mutex_;
-  // bool work_signal_prot; //! wake up protection // <- work_queue_size is used instead of this
   std::condition_variable work_signal_;
 
-  std::unique_ptr<
-      boost::lockfree::
-          queue<Work::Callable*, boost::parameter::void_, boost::parameter::void_, boost::parameter::void_>>
-      work_queue_;
-  std::atomic<size_t> work_queue_size_;
+  queue_t work_queue_;
+  std::atomic<size_type> work_queue_size_;
 };
 
-template <typename T>
-threadpool11_EXPORT inline std::future<T> Pool::postWork(std::function<T()> callable, Work::Type type) {
-  std::promise<T> promise;
-  auto future = promise.get_future();
+template <class T>
+inline void pool::call_helper(callable_t<T> callable, std::shared_ptr<std::promise<T>> promise) {
+  auto&& val = callable();
+  promise->set_value(std::move(val));
+}
 
-  /* TODO: how to avoid copy of callable into this lambda and the ones below? In a decent way... */
-  /* evil move hack */
-  auto move_callable = make_move_on_copy(std::move(callable));
-  /* evil move hack */
-  auto move_promise = make_move_on_copy(std::move(promise));
+template <>
+inline void pool::call_helper<void>(callable_t<void> callable, std::shared_ptr<std::promise<void>> promise) {
+  callable();
+  promise->set_value();
+}
 
-  auto workFunc = new Work::Callable([move_callable, move_promise, type]() mutable {
-    move_promise.value().set_value((move_callable.value())());
-    return type;
-  });
+template <class T>
+inline void pool::call_helper(callable_t<T> callable) {
+  callable();
+}
 
-  push(workFunc);
+template <class T>
+threadpool11_EXPORT inline std::future<T> pool::post_work(work_t::type_t type, callable_t<T> callable) {
+  auto promise = std::make_shared<std::promise<T>>();
+  auto future = promise->get_future();
+  std::function<void()> func = std::bind(
+    static_cast<void(*)(callable_t<T>, std::shared_ptr<std::promise<T>>)>(&pool::call_helper<T>),
+    std::move(callable),
+    std::move(promise));
+
+  std::unique_ptr<work_t> work{new work_t{std::move(type), std::move(func)}};
+
+  push(std::move(work));
 
   return future;
 }
 
-template <>
-threadpool11_EXPORT inline std::future<void> Pool::postWork(std::function<void()> callable,
-                                                            Work::Type const type) {
-  std::promise<void> promise;
-  auto future = promise.get_future();
+template <class T>
+threadpool11_EXPORT inline void pool::post_work(work_t::type_t type, callable_t<T> callable, no_future_t) {
+  std::function<void()> func = std::bind(
+    static_cast<void(*)(callable_t<T>)>(&pool::call_helper<T>),
+    std::move(callable));
 
-  /* evil move hack */
-  auto move_callable = make_move_on_copy(std::move(callable));
-  /* evil move hack */
-  auto move_promise = make_move_on_copy(std::move(promise));
+  std::unique_ptr<work_t> work{new work_t{std::move(type), std::move(func)}};
 
-  auto workFunc = new Work::Callable([move_callable, move_promise, type]() mutable {
-    (move_callable.value())();
-    move_promise.value().set_value();
-    return type;
-  });
+  push(std::move(work));
+}
 
-  push(workFunc);
+inline void pool::push(std::unique_ptr<work_t> work) {
+  work_queue_.push(work.release());
 
-  return future;
+  std::lock_guard<std::mutex> work_signal_lock(work_signal_mutex_);
+  work_queue_size_.fetch_add(1, std::memory_order_relaxed);
+  work_signal_.notify_one();
+}
+
+inline void pool::worker_main() {
+  while (true) {
+    work_t* work_ptr;
+
+    while (work_queue_.pop(work_ptr)) {
+      const std::unique_ptr<work_t> work(work_ptr);
+
+      work_queue_size_.fetch_sub(1, std::memory_order_relaxed);
+
+      (*work)();
+
+      if (work->type() == work_t::type_t::TERMINAL) {
+        return;
+      }
+    }
+
+    std::unique_lock<std::mutex> work_signal_lock(work_signal_mutex_);
+    work_signal_.wait(work_signal_lock, [this]() { return work_queue_size_.load(std::memory_order_relaxed) > 0; });
+  }
 }
 
 #undef threadpool11_EXPORT

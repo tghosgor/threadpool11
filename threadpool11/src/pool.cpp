@@ -1,6 +1,6 @@
-﻿/*!
+﻿/**
  * threadpool11
- * Copyright (C) 2013, 2014, 2015, 2016, 2017, 2028  Tolga HOSGOR
+ * Copyright (C) 2013, 2014, 2015, 2016, 2017, 2018, 2019  Tolga HOSGOR
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -19,81 +19,65 @@
 
 #include "threadpool11/pool.hpp"
 
-#include <boost/lockfree/queue.hpp>
-
 #include <algorithm>
 #include <future>
 #include <vector>
 
 namespace threadpool11 {
 
-Pool::Pool(std::size_t worker_count)
-    : worker_count_(0)
-    , active_worker_count_(0)
-    , are_all_really_finished_{true}
-    , work_queue_(new boost::lockfree::queue<Work::Callable*>(0))
-    , work_queue_size_(0) {
-  spawnWorkers(worker_count);
+const pool::no_future_t pool::no_future_tag;
+
+pool::pool(size_type worker_count)
+    : worker_count_{0}
+    , work_queue_{0}
+    , work_queue_size_{0} {
+  increase_worker_count(worker_count);
 }
 
-Pool::~Pool() { joinAll(); }
+pool::~pool() { join_all(); }
 
-void Pool::waitAll() {
-  std::unique_lock<std::mutex> notify_all_finished_lock(notify_all_finished_mutex_);
+void pool::join_all() { decrease_worker_count(std::numeric_limits<size_type>::max(), method_t::SYNC); }
 
-  notify_all_finished_signal_.wait(notify_all_finished_lock, [this]() { return are_all_really_finished_.load(); });
-}
-
-void Pool::joinAll() { decWorkerCountBy(std::numeric_limits<size_t>::max(), Method::SYNC); }
-
-size_t Pool::getWorkerCount() const { return worker_count_.load(); }
-
-void Pool::setWorkerCount(std::size_t n, Method method) {
-  if (getWorkerCount() < n)
-    incWorkerCountBy(n - getWorkerCount());
-  else
-    decWorkerCountBy(getWorkerCount() - n, method);
-}
-
-size_t Pool::getWorkQueueSize() const { return work_queue_size_.load(); }
-
-size_t Pool::getActiveWorkerCount() const { return active_worker_count_.load(); }
-
-size_t Pool::getInactiveWorkerCount() const { return worker_count_.load() - active_worker_count_.load(); }
-
-void Pool::incWorkerCountBy(std::size_t n) { spawnWorkers(n); }
-
-void Pool::decWorkerCountBy(size_t n, Method method) {
-  n = std::min(n, getWorkerCount());
-  if (method == Method::SYNC) {
-    std::vector<std::future<void>> futures;
-    futures.reserve(n);
-    while (n-- > 0)
-      futures.emplace_back(postWork<void>([]() {}, Work::Type::TERMINAL));
-    for (auto& it : futures)
-      it.get();
+void pool::set_worker_count(size_type n, method_t method) {
+  if (get_worker_count() < n) {
+    increase_worker_count(n - get_worker_count());
   } else {
-    while (n-- > 0)
-      postWork<void>([]() {}, Work::Type::TERMINAL);
+    decrease_worker_count(get_worker_count() - n, method);
   }
 }
 
-void Pool::spawnWorkers(std::size_t n) {
-  //'OR' makes sure the case where one of the expressions is zero, is valid.
-  assert(static_cast<size_t>(worker_count_ + n) > n ||
-         static_cast<size_t>(worker_count_ + n) > worker_count_);
+void pool::increase_worker_count(size_type n) {
+  worker_count_ += n;
+
   while (n-- > 0) {
-    new Worker(*this); //! Worker class takes care of its de-allocation itself after here
-    ++worker_count_;
+    std::thread thread{std::bind(&pool::worker_main, this)};
+    thread.detach();
   }
 }
 
-void Pool::push(Work::Callable* workFunc) {
-  are_all_really_finished_ = false;
+void pool::decrease_worker_count(size_type n, method_t method) {
+  std::vector<std::future<void>> futures;
+  n = std::min(n, get_worker_count());
 
-  std::unique_lock<std::mutex> work_signal_lock(work_signal_mutex_);
-  ++work_queue_size_;
-  work_queue_->push(workFunc);
-  work_signal_.notify_one();
+  worker_count_ -= n;
+
+  if (method == method_t::SYNC) {
+    futures.reserve(n);
+  }
+
+  while (n > 0) {
+    --n;
+
+    if (method == method_t::SYNC) {
+      futures.emplace_back(post_work<void>(work_t::type_t::TERMINAL, []() {}));
+    } else {
+      post_work<void>(work_t::type_t::TERMINAL, []() {}, no_future_tag);
+    }
+  }
+
+  for (auto& future : futures) {
+    future.get();
+  }
 }
+
 }
