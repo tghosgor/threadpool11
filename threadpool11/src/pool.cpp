@@ -31,7 +31,7 @@ Pool::Pool(std::size_t worker_count)
     : worker_count_(0)
     , active_worker_count_(0)
     , are_all_really_finished_{true}
-    , work_queue_(new boost::lockfree::queue<Work::Callable*>(0))
+    , work_queue_(new boost::lockfree::queue<Work*>(0))
     , work_queue_size_(0) {
   spawnWorkers(worker_count);
 }
@@ -82,18 +82,19 @@ void Pool::spawnWorkers(std::size_t n) {
   //'OR' makes sure the case where one of the expressions is zero, is valid.
   assert(static_cast<size_t>(worker_count_ + n) > n ||
          static_cast<size_t>(worker_count_ + n) > worker_count_);
+  active_worker_count_.fetch_add(n);
+  worker_count_.fetch_add(n);
   while (n-- > 0) {
     new Worker(*this); //! Worker class takes care of its de-allocation itself after here
-    ++worker_count_;
   }
 }
 
-void Pool::push(Work::Callable* workFunc) {
+void Pool::push(Work* work) {
   are_all_really_finished_ = false;
 
   std::unique_lock<std::mutex> work_signal_lock(work_signal_mutex_);
   ++work_queue_size_;
-  work_queue_->push(workFunc);
+  work_queue_->push(work);
   work_signal_.notify_one();
 }
 }

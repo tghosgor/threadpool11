@@ -44,10 +44,14 @@ namespace parameter {
 struct void_;
 }
 namespace lockfree {
+#ifdef BOOST_NO_CXX11_VARIADIC_TEMPLATES
 template <typename T,
-          class A0,
-          class A1,
-          class A2>
+          class A0 = boost::parameter::void_,
+          class A1 = boost::parameter::void_,
+          class A2 = boost::parameter::void_>
+#else
+template <typename T, typename ...Options>
+#endif
 class queue;
 }
 }
@@ -199,9 +203,9 @@ private:
 
   /**
    * @brief push Internal usage.
-   * @param workFunc
+   * @param work
    */
-  void push(Work::Callable* workFunc);
+  void push(Work* work);
 
 private:
   std::atomic<size_t> worker_count_;
@@ -215,10 +219,7 @@ private:
   // bool work_signal_prot; //! wake up protection // <- work_queue_size is used instead of this
   std::condition_variable work_signal_;
 
-  std::unique_ptr<
-      boost::lockfree::
-          queue<Work::Callable*, boost::parameter::void_, boost::parameter::void_, boost::parameter::void_>>
-      work_queue_;
+  std::unique_ptr<boost::lockfree::queue<Work*>> work_queue_;
   std::atomic<size_t> work_queue_size_;
 };
 
@@ -233,12 +234,11 @@ threadpool11_EXPORT inline std::future<T> Pool::postWork(std::function<T()> call
   /* evil move hack */
   auto move_promise = make_move_on_copy(std::move(promise));
 
-  auto workFunc = new Work::Callable([move_callable, move_promise, type]() mutable {
+  auto work = new Work([move_callable, move_promise]() mutable {
     move_promise.value().set_value((move_callable.value())());
-    return type;
-  });
+  }, type);
 
-  push(workFunc);
+  push(work);
 
   return future;
 }
@@ -254,13 +254,12 @@ threadpool11_EXPORT inline std::future<void> Pool::postWork(std::function<void()
   /* evil move hack */
   auto move_promise = make_move_on_copy(std::move(promise));
 
-  auto workFunc = new Work::Callable([move_callable, move_promise, type]() mutable {
+  auto work = new Work([move_callable, move_promise]() mutable {
     (move_callable.value())();
     move_promise.value().set_value();
-    return type;
-  });
+  }, type);
 
-  push(workFunc);
+  push(work);
 
   return future;
 }

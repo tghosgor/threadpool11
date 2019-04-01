@@ -23,12 +23,29 @@
 
 namespace threadpool11 {
 
-namespace Work {
-enum class Type { STD, TERMINAL };
-enum class Prio { DEFERRED, IMMIDIATE };
+class Work {
+public:
+  enum class Type { STD, TERMINAL };
+  enum class Prio { DEFERRED, IMMIDIATE };
 
-typedef std::function<Work::Type()> Callable;
-}
+  using Callable = std::function<void()>;
+
+public:
+  Work(Callable callable, Type type)
+      : type_{std::move(type)}
+      , callable_{std::move(callable)} {
+  }
+
+  void operator()() {
+    callable_();
+  }
+
+  Type type() const { return type_; }
+
+private:
+  Type type_;
+  Callable callable_;
+};
 
 template <typename T>
 class move_on_copy {
