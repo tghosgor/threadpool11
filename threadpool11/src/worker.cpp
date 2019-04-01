@@ -66,6 +66,7 @@ void Worker::execute(Pool& pool) {
     }
 
     if (work_type == Work::Type::TERMINAL) {
+      work_signal_lock.unlock();
       (*work)();
       return;
     }
