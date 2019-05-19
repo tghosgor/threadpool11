@@ -49,19 +49,17 @@ public:
     SYNC,
     ASYNC,
   };
-
   template <class T>
   using callable_t = std::function<T()>;
-
   using size_type = std::size_t;
 
 private:
   using work_t = work;
   using queue_t = boost::lockfree::queue<work_t*>;
-  struct no_future_t { };
+  class no_future_t { friend class pool; };
 
 public:
-  threadpool11_EXPORT pool(size_type worker_count = std::thread::hardware_concurrency());
+  threadpool11_EXPORT pool(size_type worker_count = std::thread::hardware_concurrency() / 2);
 
   ~pool();
 
@@ -80,7 +78,7 @@ public:
   }
 
   /**
-   * Same as post_work(callable_t<T>, worker_t::type_t) except does not have the overhead of futures.
+   * Same as post_work(callable_t<T>) except does not have the overhead of futures.
    */
   template <class T>
   threadpool11_EXPORT void post_work(callable_t<T> callable, no_future_t) {
@@ -167,6 +165,10 @@ public:
                                                  method_t method = method_t::ASYNC);
 
 private:
+  using mutex_t = std::mutex;
+  using cv_t = std::condition_variable;
+
+private:
   pool(pool&&) = delete;
   pool(pool const&) = delete;
   pool& operator=(pool&&) = delete;
@@ -194,8 +196,8 @@ public:
 private:
   size_type worker_count_;
 
-  mutable std::mutex work_signal_mutex_;
-  std::condition_variable work_signal_;
+  mutable mutex_t work_signal_mutex_;
+  cv_t work_signal_;
 
   queue_t work_queue_;
   std::atomic<size_type> work_queue_size_;
@@ -248,8 +250,10 @@ threadpool11_EXPORT inline void pool::post_work(work_t::type_t type, callable_t<
 inline void pool::push(std::unique_ptr<work_t> work) {
   work_queue_.push(work.release());
 
-  std::lock_guard<std::mutex> work_signal_lock(work_signal_mutex_);
-  work_queue_size_.fetch_add(1, std::memory_order_relaxed);
+  {
+    std::lock_guard<mutex_t> work_signal_lock(work_signal_mutex_);
+    work_queue_size_.fetch_add(1, std::memory_order_relaxed);
+  }
   work_signal_.notify_one();
 }
 
@@ -269,7 +273,7 @@ inline void pool::worker_main() {
       }
     }
 
-    std::unique_lock<std::mutex> work_signal_lock(work_signal_mutex_);
+    std::unique_lock<mutex_t> work_signal_lock(work_signal_mutex_);
     work_signal_.wait(work_signal_lock, [this]() { return work_queue_size_.load(std::memory_order_relaxed) > 0; });
   }
 }
