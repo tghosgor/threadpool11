@@ -56,7 +56,7 @@ public:
 private:
   using work_t = work;
   using queue_t = boost::lockfree::queue<work_t*>;
-  class no_future_t { friend class pool; };
+  class no_future_t { friend class pool; no_future_t() {} };
 
 public:
   threadpool11_EXPORT pool(size_type worker_count = std::thread::hardware_concurrency() / 2);
